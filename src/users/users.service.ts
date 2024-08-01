@@ -16,7 +16,7 @@ export class UsersService {
   }
 
   async createUser(dto: CreateUserDto) {
-    const findUser = await this.findUser(dto.login);
+    const findUser = await this.findUser(dto.login, dto.email);
     if (findUser) {
       throw new BadRequestException('User already exists');
     }
@@ -27,7 +27,7 @@ export class UsersService {
     return this.usersRepository.save(dto);
   }
 
-  async findUser(email: string) {
-    return this.usersRepository.findOne({ where: { email } });
+  async findUser(login: string, email: string) {
+    return this.usersRepository.findOne({ where: [{ login }, { email }] });
   }
 }
