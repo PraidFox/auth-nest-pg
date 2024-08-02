@@ -1,8 +1,10 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
-import { UsersModule } from './users/users.module';
-import configurations from './configs/configuration';
+import { UsersModule } from './userModules/users/users.module';
+import configurations from './utils/constants/configs/configuration';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { AuthModule } from './userModules/auth/auth.module';
+import { TokenModule } from './userModules/token/token.module';
 
 @Module({
   imports: [
@@ -27,6 +29,8 @@ import { TypeOrmModule } from '@nestjs/typeorm';
       }),
     }),
     UsersModule,
+    AuthModule,
+    TokenModule,
   ],
   controllers: [],
   providers: [],
