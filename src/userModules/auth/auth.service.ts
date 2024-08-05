@@ -13,15 +13,15 @@ export class AuthService {
     private readonly tokenService: TokenService,
   ) {}
   async register(dto: CreateUserDto) {
-    let findUser = await this.userService.findUser(dto.login);
+    const findUser = await this.userService.findUser(dto.login);
     if (findUser) {
       throw new BadRequestException(MyError.USER_ALREADY_EXISTS_LOGIN);
     }
 
-    findUser = await this.userService.findUserByEmail(dto.email);
-    if (findUser) {
-      throw new BadRequestException(MyError.USER_ALREADY_EXISTS_EMAIL);
-    }
+    // findUser = await this.userService.findUserByEmail(dto.email);
+    // if (findUser) {
+    //   throw new BadRequestException(MyError.USER_ALREADY_EXISTS_EMAIL);
+    // }
 
     const salt = await genSalt(10);
     dto.password = await hash(dto.password, salt);
@@ -31,6 +31,7 @@ export class AuthService {
 
   async login(dto: AuthDto) {
     const existUser = await this.userService.findUser(dto.login);
+
     if (!existUser) {
       throw new BadRequestException(MyError.USER_NOT_FOUND);
     }
@@ -42,6 +43,6 @@ export class AuthService {
 
     const token = await this.tokenService.generateToken(existUser.login);
 
-    return { ...existUser, token };
+    return { login: existUser.login, token };
   }
 }
