@@ -41,7 +41,12 @@ export class AuthService {
       throw new BadRequestException(MyError.WRONG_PASSWORD);
     }
 
-    const token = await this.tokenService.generateToken(existUser.login);
+    const userData = {
+      login: existUser.login,
+      email: existUser.email,
+    };
+
+    const token = await this.tokenService.generateToken(userData);
 
     return { login: existUser.login, token };
   }
