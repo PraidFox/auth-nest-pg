@@ -1,28 +1,26 @@
-import {
-  Column,
-  CreateDateColumn,
-  Entity,
-  PrimaryGeneratedColumn,
-  UpdateDateColumn,
-} from 'typeorm';
+import { Column, Entity } from 'typeorm';
+import { ApiHideProperty, ApiProperty } from '@nestjs/swagger';
+import { BaseEntity } from '../../../utils/base.entity';
 
 @Entity('users')
-export class UserEntity {
-  @PrimaryGeneratedColumn()
-  id: number;
-
-  @Column()
+export class UserEntity extends BaseEntity {
+  @ApiProperty()
+  @Column({ unique: true })
   login: string;
 
-  @Column()
+  @ApiProperty()
+  @Column({ unique: true })
   email: string;
 
-  @Column()
+  @ApiProperty()
+  @Column({ select: false })
   password: string;
 
-  @CreateDateColumn()
-  createdAt: Date;
+  @ApiHideProperty()
+  @Column({ type: 'timestamp with time zone', nullable: true })
+  emailVerifiedAt: Date;
 
-  @UpdateDateColumn()
-  updatedAt: Date;
+  @ApiHideProperty()
+  @Column({ type: 'boolean', default: false })
+  isActive: boolean;
 }

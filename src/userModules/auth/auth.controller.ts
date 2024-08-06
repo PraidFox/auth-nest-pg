@@ -1,18 +1,16 @@
-import { Body, Controller, HttpCode, Post, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, HttpCode, Post } from '@nestjs/common';
 import { AuthService } from './auth.service';
-import { CreateUserDto } from '../users/dto/user.dto';
-import { AuthDto } from './dto/auth.dto';
+import { AuthDto, RegisterDto } from './dto/auth.dto';
 import { ApiResponse, ApiTags } from '@nestjs/swagger';
-import { JwtAuthGuard } from './guards/jwt.guards';
 
 @ApiTags('Auth')
 @Controller('auth')
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
 
-  @ApiResponse({ status: 201, type: CreateUserDto })
+  @ApiResponse({ status: 201, type: RegisterDto })
   @Post('register')
-  async register(@Body() dto: CreateUserDto) {
+  async register(@Body() dto: RegisterDto) {
     return this.authService.register(dto);
   }
 
@@ -22,9 +20,8 @@ export class AuthController {
     return this.authService.login(dto);
   }
 
-  @UseGuards(JwtAuthGuard)
-  @Post('test')
-  async test() {
+  @Get('refresh')
+  async refresh() {
     // когда писать async в контроллере???????????
     return true;
   }
