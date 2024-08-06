@@ -46,7 +46,6 @@ export class UsersService {
   }
 
   async deleteUser(id: string) {
-    await this.usersRepository.delete(id);
-    return true;
+    return await this.usersRepository.delete(id);
   }
 }

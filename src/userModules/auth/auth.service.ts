@@ -18,11 +18,6 @@ export class AuthService {
       throw new BadRequestException(MyError.USER_ALREADY_EXISTS_LOGIN);
     }
 
-    // findUser = await this.userService.findUserByEmail(dto.email);
-    // if (findUser) {
-    //   throw new BadRequestException(MyError.USER_ALREADY_EXISTS_EMAIL);
-    // }
-
     const salt = await genSalt(10);
     dto.password = await hash(dto.password, salt);
 
