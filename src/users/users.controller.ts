@@ -19,7 +19,7 @@ export class UsersController {
   @UseGuards(JwtAuthGuard)
   @Get('all')
   async getAllUsers() {
-    //console.log('getAllUsers', req);
+    console.log('getAllUsers');
     return this.userService.getUsers();
   }
 
