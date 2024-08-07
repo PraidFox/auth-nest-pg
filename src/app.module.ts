@@ -7,6 +7,7 @@ import { AuthModule } from './auth/auth.module';
 import { getPostgresConfig } from './utils/constants/configs/postgres.config';
 import { EmailModule } from './email/email.module';
 import { MailerModule } from '@nestjs-modules/mailer';
+import { MailerConfigClass } from './utils/constants/configs/mail.config';
 
 @Module({
   imports: [
@@ -15,23 +16,13 @@ import { MailerModule } from '@nestjs-modules/mailer';
       load: [configurations],
     }),
     TypeOrmModule.forRootAsync({
-      imports: [ConfigModule],
+      imports: [],
       inject: [ConfigService],
       useFactory: getPostgresConfig,
     }),
-    MailerModule.forRoot({
-      transport: {
-        host: 'smtp.mail.ru',
-        port: 465,
-        secure: true,
-        auth: {
-          user: 'your-email@mail.ru',
-          pass: 'your-password',
-        },
-      },
-      defaults: {
-        from: '"Your Name" <your-email@mail.ru>',
-      },
+    MailerModule.forRootAsync({
+      imports: [],
+      useClass: MailerConfigClass,
     }),
     UsersModule,
     AuthModule,
