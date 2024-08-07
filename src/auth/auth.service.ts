@@ -9,8 +9,6 @@ import { ConfigService } from '@nestjs/config';
 
 @Injectable()
 export class AuthService {
-  private async;
-
   constructor(
     private readonly userService: UsersService,
     private readonly jwtService: JwtService,
@@ -35,7 +33,10 @@ export class AuthService {
     }
     const { id, login } = existUser;
 
-    const { accessToken, refreshToken } = this.generateToken({ id, login });
+    const { accessToken, refreshToken } = await this.generateTokens({
+      id,
+      login,
+    });
     const { exp } = this.jwtService.decode(accessToken);
 
     return {
@@ -49,7 +50,10 @@ export class AuthService {
     try {
       const { id, login } = this.jwtService.verify(token);
 
-      const { accessToken, refreshToken } = this.generateTokens({ id, login });
+      const { accessToken, refreshToken } = await this.generateTokens({
+        id,
+        login,
+      });
       const { exp } = this.jwtService.decode(accessToken);
 
       return {

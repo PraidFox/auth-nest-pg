@@ -11,7 +11,12 @@ import {
 } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { AuthDto, RegisterDto } from './dto/auth.dto';
-import { ApiCreatedResponse, ApiResponse, ApiTags } from '@nestjs/swagger';
+import {
+  ApiCreatedResponse,
+  ApiOperation,
+  ApiResponse,
+  ApiTags,
+} from '@nestjs/swagger';
 import { Request, Response } from 'express';
 import { JwtAuthGuard } from './guards/jwt.guards';
 import { RegisterResponse, TokenResponse } from './dto/responses';
@@ -22,6 +27,7 @@ export class AuthController {
   constructor(private readonly authService: AuthService) {}
 
   @ApiCreatedResponse({ type: RegisterResponse })
+  @ApiOperation({ summary: 'Регистрация пользователя' })
   @Post('register')
   async register(@Body() dto: RegisterDto): Promise<RegisterResponse> {
     const user = await this.authService.register(dto);
