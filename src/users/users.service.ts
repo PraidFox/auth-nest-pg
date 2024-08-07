@@ -14,14 +14,13 @@ export class UsersService {
     private usersRepository: Repository<UserEntity>,
   ) {}
 
-  getUsers() {
+  async getUsers() {
     return this.usersRepository.find();
   }
 
   async createUser(dto: CreateUserDto) {
     try {
-      const user = this.usersRepository.create(dto);
-      return await this.usersRepository.save(user);
+      return await this.usersRepository.save(dto);
     } catch (e) {
       throw new BadRequestException(MyError.USER_ALREADY_EXISTS_LOGIN);
     }
@@ -47,7 +46,10 @@ export class UsersService {
   }
 
   async deleteUser(id: string) {
-    // return await this.usersRepository.softDelete(id);
+    return await this.usersRepository.softDelete(id);
+  }
+
+  async restoreUser(id: string) {
     return await this.usersRepository.restore(id);
   }
 }

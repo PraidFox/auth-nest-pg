@@ -18,6 +18,7 @@ export class AuthService {
   ) {}
 
   async register(dto: RegisterDto) {
+    //TODO: посмотреть, вроде хеширование пароля можно прописать непосредственно в entity
     const salt = await genSalt(10);
     dto.password = await hash(dto.password, salt);
 
@@ -29,16 +30,12 @@ export class AuthService {
       dto.emailOrLogin,
     );
     const isPasswordEquals = await compare(dto.password, existUser.password);
-
     if (!existUser || !isPasswordEquals) {
       throw new UnauthorizedException(MyError.WRONG_PASSWORD);
     }
-
     const { id, login } = existUser;
 
-    const accessToken = await this.generateAccessToken({ id, login });
-    const refreshToken = await this.generateRefreshToken({ id, login });
-
+    const { accessToken, refreshToken } = this.generateToken({ id, login });
     const { exp } = this.jwtService.decode(accessToken);
 
     return {
@@ -52,9 +49,7 @@ export class AuthService {
     try {
       const { id, login } = this.jwtService.verify(token);
 
-      const accessToken = await this.generateAccessToken({ id, login });
-      const refreshToken = await this.generateRefreshToken({ id, login });
-
+      const { accessToken, refreshToken } = this.generateTokens({ id, login });
       const { exp } = this.jwtService.decode(accessToken);
 
       return {
@@ -65,6 +60,13 @@ export class AuthService {
     } catch (error) {
       throw new UnauthorizedException('Рефреш токен некорректный');
     }
+  }
+
+  private async generateTokens({ id, login }: DataForToken) {
+    const accessToken = await this.generateAccessToken({ id, login });
+    const refreshToken = await this.generateRefreshToken({ id, login });
+
+    return { accessToken, refreshToken };
   }
 
   private async generateAccessToken({ id, login }: DataForToken) {

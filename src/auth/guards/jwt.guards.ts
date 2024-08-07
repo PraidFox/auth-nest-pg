@@ -1,4 +1,16 @@
 import { AuthGuard } from '@nestjs/passport';
+import { UnauthorizedException } from '@nestjs/common';
 
-//TODO разобраться как отлавливать протухший токен самостоятельно, для выброса необходимого эксепшена
-export class JwtAuthGuard extends AuthGuard('jwt') {}
+export class JwtAuthGuard extends AuthGuard('jwt') {
+  handleRequest(err, user, info) {
+    if (err) {
+      throw new UnauthorizedException(err.message);
+    }
+
+    if (info || !user) {
+      throw new UnauthorizedException(info.message);
+    }
+
+    return user;
+  }
+}
