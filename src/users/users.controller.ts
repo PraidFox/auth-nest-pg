@@ -5,7 +5,6 @@ import {
   Get,
   Param,
   Patch,
-  Req,
   UseGuards,
 } from '@nestjs/common';
 import { UsersService } from './users.service';
@@ -20,13 +19,13 @@ export class UsersController {
 
   @Get('all')
   async getAllUsers() {
+    console.log('getAllUsers');
     return this.userService.getUsers();
   }
 
-  @Get(`:login`)
-  async getUser(@Param('login') login: string) {
-    console.log(login);
-    return this.userService.findUser(login);
+  @Get(`:id`)
+  async getUserById(@Param('id') id: number) {
+    return this.userService.findUserById(id);
   }
 
   @UseGuards(JwtAuthGuard)
@@ -34,11 +33,8 @@ export class UsersController {
   async updateUser(
     @Param('id') id: string,
     @Body() updateDto: UpdateUserDto,
-    @Req() req,
   ): Promise<UpdateUserDto> {
-    console.log('id', id);
-    console.log('req', req.user);
-    console.log('updateDto', updateDto);
+    //TODO Разобраться с обновлением, так как так можно обновить вплоть до id
     await this.userService.updateUser(id, updateDto);
     return updateDto;
   }
