@@ -19,14 +19,9 @@ export class UsersController {
   @UseGuards(JwtAuthGuard)
   @Get('all')
   async getAllUsers() {
+    //console.log('getAllUsers', req);
     return this.userService.getUsers();
   }
-
-  // @Get(`:login`)
-  // async getUserByLogin(@Param('login') login: string) {
-  //   console.log('login', login);
-  //   return this.userService.findUserByLogin(login);
-  // }
 
   @Get(`:id`)
   async getUserById(@Param('id') id: number) {

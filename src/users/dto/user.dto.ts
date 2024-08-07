@@ -6,13 +6,13 @@ import {
   MinLength,
 } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
-import { MyError } from '../../../utils/constants/errors';
+import { MyError } from '../../utils/constants/errors';
 
 export class CreateUserDto {
   @ApiProperty()
   @IsString()
   @IsNotEmpty({ message: MyError.USER_NAME_REQUIRED })
-  userName: string;
+  login: string;
 
   @ApiProperty()
   @IsEmail()

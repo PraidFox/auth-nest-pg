@@ -1,7 +1,7 @@
 import { BeforeInsert, Column, Entity, JoinColumn, ManyToOne } from 'typeorm';
 import { UserEntity } from '../../users/entities/user.entity';
 import { randomStringGenerator } from '@nestjs/common/utils/random-string-generator.util';
-import { BaseEntity } from '../../../utils/base.entity';
+import { BaseEntity } from '../../utils/base.entity';
 
 export enum TokenType {
   REGISTER_VERIFY = 'REGISTER_VERIFY',

@@ -3,7 +3,7 @@ import { UserEntity } from './entities/user.entity';
 import { Repository } from 'typeorm';
 import { CreateUserDto, UpdateUserDto } from './dto/user.dto';
 import { BadRequestException, Injectable } from '@nestjs/common';
-import { MyError } from '../../utils/constants/errors';
+import { MyError } from '../utils/constants/errors';
 
 @Injectable()
 export class UsersService {
@@ -33,10 +33,12 @@ export class UsersService {
     });
   }
 
-  async findUserWithPassword(emailOrLogin: string) {
+  async findUserWithPassword(
+    emailOrLogin: string,
+  ): Promise<Pick<UserEntity, 'id' | 'login' | 'password'>> {
     return this.usersRepository.findOne({
       where: [{ login: emailOrLogin }, { email: emailOrLogin }],
-      select: ['password'],
+      select: ['id', 'login', 'password'],
     });
   }
 

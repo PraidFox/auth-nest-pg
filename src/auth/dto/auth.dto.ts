@@ -1,8 +1,8 @@
 import { IsNotEmpty, IsString, MinLength, Validate } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
 import { CreateUserDto } from '../../users/dto/user.dto';
-import { MyError } from '../../../utils/constants/errors';
-import { IsPasswordMatching } from '../../../utils/decorators/same-passwords.decorator';
+import { MyError } from '../../utils/constants/errors';
+import { IsPasswordMatching } from '../../utils/decorators/same-passwords.decorator';
 
 export class RegisterDto extends CreateUserDto {
   @ApiProperty()
