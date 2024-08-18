@@ -20,7 +20,7 @@ export class UserEntity extends BaseEntity {
   @Column({ type: 'timestamp with time zone', nullable: true })
   emailVerifiedAt: Date;
 
-  @ApiHideProperty()
-  @Column({ type: 'boolean', default: false })
-  isActive: boolean;
+  // @ApiHideProperty()
+  // @Column({ type: 'boolean', default: false })
+  // isActive: boolean;
 }

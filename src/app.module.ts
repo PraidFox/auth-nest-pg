@@ -9,6 +9,8 @@ import { EmailModule } from './email/email.module';
 import { MailerModule } from '@nestjs-modules/mailer';
 import { MailerConfigClass } from './utils/constants/configs/mail.config';
 
+//Может модули разбить на два массива? Модули созданные мной, а второй сторонние модули
+//Когда использовать useFactory, а когда useClass
 @Module({
   imports: [
     ConfigModule.forRoot({

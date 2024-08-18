@@ -1,6 +1,8 @@
 import { MailerOptions, MailerOptionsFactory } from '@nestjs-modules/mailer';
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { HandlebarsAdapter } from '@nestjs-modules/mailer/dist/adapters/handlebars.adapter';
+import * as path from 'path';
 
 @Injectable()
 export class MailerConfigClass implements MailerOptionsFactory {
@@ -18,21 +20,17 @@ export class MailerConfigClass implements MailerOptionsFactory {
         },
       },
       defaults: {
-        from: '"Your Name" <kvestha@mail.ru>',
+        from: `"${this.configService.get(
+          'mail.name',
+        )}" <${this.configService.get('mail.user')}>`,
       },
-      // template: {
-      //   dir: path.join(
-      //     this.configService.get('app.workingDirectory'),
-      //     'src',
-      //     'modules',
-      //     'mail',
-      //     'templates',
-      //   ),
-      //   adapter: new HandlebarsAdapter(),
-      //   options: {
-      //     strict: true,
-      //   },
-      // },
+      template: {
+        dir: path.join('src', 'email', 'templates'),
+        adapter: new HandlebarsAdapter(),
+        options: {
+          strict: true,
+        },
+      },
     };
   }
 }

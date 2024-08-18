@@ -62,7 +62,6 @@ export class AuthController {
       httpOnly: true,
       secure: false,
     });
-
     return true;
   }
 
