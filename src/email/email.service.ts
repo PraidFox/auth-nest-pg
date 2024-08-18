@@ -19,15 +19,16 @@ export class EmailService {
     return 'email sent';
   }
 
-  async verifyEmail({ to }) {
+  async verifyEmail(to: string, token: string) {
     await this.mailerService.sendMail({
-      to: 'hiryrg_94_94@mail.ru',
+      to,
       subject: 'Необходимо подтверждение почты',
       template: 'verification',
       context: {
+        url: `http://localhost:3000/verify/${token}`,
         app_name: 'Наименование приложения',
-        title: 'Thank You For Registration, Verify Your Account.',
-        actionTitle: 'Verify Your Account',
+        title: 'Спасибо за регистрацию, подтвердите свою почту.',
+        actionTitle: 'Перейдите по ссылке для подтверждения почты',
       },
     });
     return 'email sent';

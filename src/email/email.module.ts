@@ -3,6 +3,7 @@ import { EmailService } from './email.service';
 import { EmailController } from './email.controller';
 
 @Module({
+  exports: [EmailService],
   providers: [EmailService],
   controllers: [EmailController],
 })

@@ -6,6 +6,8 @@ import { AuthDto, RegisterDto } from './dto/auth.dto';
 import { JwtService } from '@nestjs/jwt';
 import { DataForToken } from '../utils/interfaces';
 import { ConfigService } from '@nestjs/config';
+import { EmailService } from '../email/email.service';
+import { randomStringGenerator } from '@nestjs/common/utils/random-string-generator.util';
 
 @Injectable()
 export class AuthService {
@@ -13,14 +15,23 @@ export class AuthService {
     private readonly userService: UsersService,
     private readonly jwtService: JwtService,
     private readonly configService: ConfigService,
+    private readonly emailService: EmailService,
   ) {}
 
   async register(dto: RegisterDto) {
-    //TODO: посмотреть, вроде хеширование пароля можно прописать непосредственно в entity
+    //TODO: посмотреть, вроде хеширование пароля можно прописать непосредственно в entity + token верефикации сгенерировать тоже можно на уровне энтити
     const salt = await genSalt(10);
     dto.password = await hash(dto.password, salt);
+    dto.tokenVerify = `${randomStringGenerator()}-${randomStringGenerator()}`;
 
-    return this.userService.createUser(dto);
+    const user = await this.userService.createUser(dto);
+    // await this.emailService.verifyEmail(user.email, user.tokenVerify);
+    await this.emailService.verifyEmail(
+      'hiryrg_94_94@mail.ru',
+      user.tokenVerify,
+    );
+
+    return user;
   }
 
   async login(dto: AuthDto) {
