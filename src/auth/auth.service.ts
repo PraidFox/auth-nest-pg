@@ -1,7 +1,7 @@
 import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { UsersService } from '../users/users.service';
 import { MyError } from '../utils/constants/errors';
-import { compare, genSalt, hash } from 'bcryptjs';
+import { genSalt, hash } from 'bcryptjs';
 import { AuthDto, RegisterDto } from './dto/auth.dto';
 import { JwtService } from '@nestjs/jwt';
 import { DataForToken } from '../utils/interfaces';
@@ -20,6 +20,7 @@ export class AuthService {
 
   async register(dto: RegisterDto) {
     //TODO: посмотреть, вроде хеширование пароля можно прописать непосредственно в entity + token верефикации сгенерировать тоже можно на уровне энтити
+
     const salt = await genSalt(10);
     dto.password = await hash(dto.password, salt);
     dto.tokenVerify = `${randomStringGenerator()}-${randomStringGenerator()}`;
@@ -29,17 +30,38 @@ export class AuthService {
     await this.emailService.verifyEmail(
       'hiryrg_94_94@mail.ru',
       user.tokenVerify,
+      user.id,
     );
 
     return user;
   }
 
+  async verify(token: string, userId: number) {
+    const userEntity = await this.userService.findUser({
+      where: [{ id: userId, tokenVerify: token }],
+    });
+
+    if (userEntity) {
+      userEntity.tokenVerify = null;
+      userEntity.emailVerifiedAt = new Date();
+      await userEntity.save();
+    } else {
+      throw new UnauthorizedException(MyError.VERIFICATION_FAILED);
+    }
+  }
+
   async login(dto: AuthDto) {
-    const existUser = await this.userService.findUserWithPassword(
-      dto.emailOrLogin,
-    );
-    const isPasswordEquals = await compare(dto.password, existUser.password);
-    if (!existUser || !isPasswordEquals) {
+    const salt = await genSalt(10);
+
+    const existUser = await this.userService.findUser({
+      where: [
+        { login: dto.emailOrLogin },
+        { email: dto.emailOrLogin },
+        { password: await hash(dto.password, salt) },
+      ],
+    });
+
+    if (!existUser) {
       throw new UnauthorizedException(MyError.WRONG_PASSWORD);
     }
     const { id, login } = existUser;

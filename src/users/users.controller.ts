@@ -25,13 +25,14 @@ export class UsersController {
 
   @Get(`:id`)
   async getUserById(@Param('id') id: number) {
-    return this.userService.findUserById(id);
+    //return this.userService.findUserById(id);
+    return this.userService.findUserEmailOrLogin(id.toString());
   }
 
   @UseGuards(JwtAuthGuard)
   @Patch(':id')
   async updateUser(
-    @Param('id') id: string,
+    @Param('id') id: number,
     @Body() updateDto: UpdateUserDto,
   ): Promise<UpdateUserDto> {
     //TODO Разобраться с обновлением, так как так можно обновить вплоть до id

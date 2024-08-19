@@ -4,6 +4,7 @@ import {
   Get,
   HttpCode,
   Post,
+  Query,
   Req,
   Res,
   UnauthorizedException,
@@ -32,6 +33,17 @@ export class AuthController {
   async register(@Body() dto: RegisterDto): Promise<RegisterResponse> {
     const user = await this.authService.register(dto);
     return { id: user.id };
+  }
+
+  @ApiCreatedResponse({ type: RegisterResponse })
+  @ApiOperation({ summary: 'Проверка подтверждения почты' })
+  @Get('verify')
+  async verify(
+    @Query('') query: { token: string; userId: number },
+  ): Promise<{ message: string; verified: boolean }> {
+    await this.authService.verify(query.token, query.userId);
+
+    return { message: 'Почта подтверждена', verified: true };
   }
 
   @ApiResponse({ status: 200, type: TokenResponse })
