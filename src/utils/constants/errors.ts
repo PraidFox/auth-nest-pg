@@ -9,4 +9,5 @@ export const MyError = {
   PASSWORD_REQUIRED: 'Пароль обязателен',
   PASSWORD_REPEAT_REQUIRED: 'Необходимо повторить пароль',
   PASSWORD_MISMATCH: 'Пароли не совпадают',
+  VERIFICATION_FAILED: 'Пользователь с таким токеном верификации не найден',
 };

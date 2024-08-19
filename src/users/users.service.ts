@@ -1,6 +1,6 @@
 import { InjectRepository } from '@nestjs/typeorm';
 import { UserEntity } from './entities/user.entity';
-import { Repository } from 'typeorm';
+import { FindOneOptions, Repository } from 'typeorm';
 import { CreateUserDto, UpdateUserDto } from './dto/user.dto';
 import { BadRequestException, Injectable } from '@nestjs/common';
 import { MyError } from '../utils/constants/errors';
@@ -26,22 +26,30 @@ export class UsersService {
     }
   }
 
-  async findUserById(id: number) {
+  async findUserById(id: number, fields?: FindOneOptions<UserEntity>) {
     return this.usersRepository.findOne({
       where: [{ id }],
+      ...fields,
     });
   }
 
-  async findUserWithPassword(
-    emailOrLogin: string,
-  ): Promise<Pick<UserEntity, 'id' | 'login' | 'password'>> {
+  async findUser(
+    where: FindOneOptions<UserEntity>,
+    fields?: FindOneOptions<UserEntity>,
+  ) {
+    return this.usersRepository.findOne({
+      ...where,
+      ...fields,
+    });
+  }
+
+  async findUserEmailOrLogin(emailOrLogin: string): Promise<UserEntity> {
     return this.usersRepository.findOne({
       where: [{ login: emailOrLogin }, { email: emailOrLogin }],
-      select: ['id', 'login', 'password'],
     });
   }
 
-  async updateUser(id: string, dto: UpdateUserDto) {
+  async updateUser(id: number, dto: UpdateUserDto) {
     return this.usersRepository.update(id, dto);
   }
 

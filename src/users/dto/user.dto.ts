@@ -1,11 +1,12 @@
 import {
+  IsDate,
   IsEmail,
   IsNotEmpty,
   IsOptional,
   IsString,
   MinLength,
 } from 'class-validator';
-import { ApiProperty } from '@nestjs/swagger';
+import { ApiHideProperty, ApiProperty } from '@nestjs/swagger';
 import { MyError } from '../../utils/constants/errors';
 
 export class CreateUserDto {
@@ -24,11 +25,23 @@ export class CreateUserDto {
   @IsNotEmpty({ message: MyError.PASSWORD_REQUIRED })
   @MinLength(6)
   password: string;
+
+  @ApiHideProperty()
+  @IsString()
+  @IsOptional()
+  tokenVerify: string;
 }
 
 export class UpdateUserDto {
   @ApiProperty()
   @IsString()
-  @IsOptional()
   email: string;
+
+  @ApiProperty()
+  @IsString()
+  password: string;
+
+  @ApiProperty()
+  @IsDate()
+  emailVerifiedAt: Date;
 }

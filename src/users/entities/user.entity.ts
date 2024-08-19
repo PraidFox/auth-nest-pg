@@ -16,11 +16,15 @@ export class UserEntity extends BaseEntity {
   @Column({ select: false })
   password: string;
 
+  @ApiProperty()
+  @Column({ select: false, nullable: true })
+  tokenVerify: string;
+
   @ApiHideProperty()
   @Column({ type: 'timestamp with time zone', nullable: true })
   emailVerifiedAt: Date;
 
-  @ApiHideProperty()
-  @Column({ type: 'boolean', default: false })
-  isActive: boolean;
+  // @ApiHideProperty()
+  // @Column({ type: 'boolean', default: false })
+  // isActive: boolean;
 }

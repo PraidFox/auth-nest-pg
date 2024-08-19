@@ -15,4 +15,11 @@ export default () => ({
     expireAccess: process.env.EXPIRE_ACCESS_TOKEN,
     expireRefresh: process.env.EXPIRE_REFRESH_TOKEN,
   },
+  mail: {
+    host: process.env.MAIL_HOST,
+    port: process.env.MAIL_PORT,
+    user: process.env.MAIL_USER,
+    name: process.env.MAIL_NAME,
+    password: process.env.MAIL_PASSWORD,
+  },
 });

@@ -4,6 +4,7 @@ import {
   Get,
   HttpCode,
   Post,
+  Query,
   Req,
   Res,
   UnauthorizedException,
@@ -11,7 +12,12 @@ import {
 } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { AuthDto, RegisterDto } from './dto/auth.dto';
-import { ApiCreatedResponse, ApiResponse, ApiTags } from '@nestjs/swagger';
+import {
+  ApiCreatedResponse,
+  ApiOperation,
+  ApiResponse,
+  ApiTags,
+} from '@nestjs/swagger';
 import { Request, Response } from 'express';
 import { JwtAuthGuard } from './guards/jwt.guards';
 import { RegisterResponse, TokenResponse } from './dto/responses';
@@ -22,10 +28,22 @@ export class AuthController {
   constructor(private readonly authService: AuthService) {}
 
   @ApiCreatedResponse({ type: RegisterResponse })
+  @ApiOperation({ summary: 'Регистрация пользователя' })
   @Post('register')
   async register(@Body() dto: RegisterDto): Promise<RegisterResponse> {
     const user = await this.authService.register(dto);
     return { id: user.id };
+  }
+
+  @ApiCreatedResponse({ type: RegisterResponse })
+  @ApiOperation({ summary: 'Проверка подтверждения почты' })
+  @Get('verify')
+  async verify(
+    @Query('') query: { token: string; userId: number },
+  ): Promise<{ message: string; verified: boolean }> {
+    await this.authService.verify(query.token, query.userId);
+
+    return { message: 'Почта подтверждена', verified: true };
   }
 
   @ApiResponse({ status: 200, type: TokenResponse })
@@ -56,7 +74,6 @@ export class AuthController {
       httpOnly: true,
       secure: false,
     });
-
     return true;
   }
 
