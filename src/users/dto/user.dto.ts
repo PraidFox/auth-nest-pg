@@ -1,5 +1,4 @@
 import {
-  IsDate,
   IsEmail,
   IsNotEmpty,
   IsOptional,
@@ -35,13 +34,11 @@ export class CreateUserDto {
 export class UpdateUserDto {
   @ApiProperty()
   @IsString()
+  @IsOptional()
   email: string;
 
   @ApiProperty()
   @IsString()
-  password: string;
-
-  @ApiProperty()
-  @IsDate()
-  emailVerifiedAt: Date;
+  @IsOptional()
+  login: string;
 }
