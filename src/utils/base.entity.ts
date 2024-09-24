@@ -1,6 +1,5 @@
 import {
   BaseEntity as _BaseEntity,
-  Column,
   CreateDateColumn,
   DeleteDateColumn,
   PrimaryGeneratedColumn,
@@ -10,7 +9,6 @@ import {
 export abstract class BaseEntity extends _BaseEntity {
   //@ApiProperty()
   @PrimaryGeneratedColumn()
-  @Column({ update: false })
   id: number;
 
   //@ApiProperty()

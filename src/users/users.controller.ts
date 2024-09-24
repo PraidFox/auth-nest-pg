@@ -6,6 +6,8 @@ import {
   Param,
   Patch,
   UseGuards,
+  UsePipes,
+  ValidationPipe,
 } from '@nestjs/common';
 import { UsersService } from './users.service';
 import { ApiTags } from '@nestjs/swagger';
@@ -19,7 +21,6 @@ export class UsersController {
 
   @Get('all')
   async getAllUsers() {
-    console.log('getAllUsers');
     return this.userService.getUsers();
   }
 
@@ -31,11 +32,11 @@ export class UsersController {
 
   @UseGuards(JwtAuthGuard)
   @Patch(':id')
+  @UsePipes(new ValidationPipe({ transform: true, whitelist: true }))
   async updateUser(
     @Param('id') id: number,
     @Body() updateDto: UpdateUserDto,
   ): Promise<UpdateUserDto> {
-    //TODO Разобраться с обновлением, так как так можно обновить вплоть до id
     await this.userService.updateUser(id, updateDto);
     return updateDto;
   }
