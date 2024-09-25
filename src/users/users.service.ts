@@ -46,6 +46,7 @@ export class UsersService {
   async findUserEmailOrLogin(emailOrLogin: string): Promise<UserEntity> {
     return this.usersRepository.findOne({
       where: [{ login: emailOrLogin }, { email: emailOrLogin }],
+      select: ['id', 'login', 'email', 'password'],
     });
   }
 
@@ -53,7 +54,7 @@ export class UsersService {
     return this.usersRepository.update(id, dto);
   }
 
-  async deleteUser(id: string) {
+  async removeUser(id: string) {
     return await this.usersRepository.softDelete(id);
   }
 

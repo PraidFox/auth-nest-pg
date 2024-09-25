@@ -1,7 +1,7 @@
 import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { UsersService } from '../users/users.service';
 import { MyError } from '../utils/constants/errors';
-import { genSalt, hash } from 'bcryptjs';
+import { compare, genSalt, hash } from 'bcryptjs';
 import { AuthDto, RegisterDto } from './dto/auth.dto';
 import { JwtService } from '@nestjs/jwt';
 import { DataForToken } from '../utils/interfaces';
@@ -19,8 +19,6 @@ export class AuthService {
   ) {}
 
   async register(dto: RegisterDto) {
-    //TODO: посмотреть, вроде хеширование пароля можно прописать непосредственно в entity + token верефикации сгенерировать тоже можно на уровне энтити
-
     const salt = await genSalt(10);
     dto.password = await hash(dto.password, salt);
     dto.tokenVerify = `${randomStringGenerator()}-${randomStringGenerator()}`;
@@ -51,19 +49,23 @@ export class AuthService {
   }
 
   async login(dto: AuthDto) {
-    const salt = await genSalt(10);
+    // const existUser = await this.userService.findUser({
+    //   where: [{ login: dto.emailOrLogin }, { email: dto.emailOrLogin }],
+    // });
 
-    const existUser = await this.userService.findUser({
-      where: [
-        { login: dto.emailOrLogin },
-        { email: dto.emailOrLogin },
-        { password: await hash(dto.password, salt) },
-      ],
-    });
+    const existUser = await this.userService.findUserEmailOrLogin(
+      dto.emailOrLogin,
+    );
 
     if (!existUser) {
-      throw new UnauthorizedException(MyError.WRONG_PASSWORD);
+      throw new UnauthorizedException(MyError.WRONG_LOGIN);
     }
+
+    const isPasswordValid = await compare(dto.password, existUser.password);
+    if (!isPasswordValid) {
+      throw new UnauthorizedException(MyError.WRONG_LOGIN);
+    }
+
     const { id, login } = existUser;
 
     const { accessToken, refreshToken } = await this.generateTokens({

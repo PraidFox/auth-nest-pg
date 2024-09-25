@@ -35,12 +35,10 @@ export class UpdateUserDto {
   @ApiProperty()
   @IsString()
   @IsOptional()
-  //@Expose()
   email: string;
 
   @ApiProperty()
   @IsString()
   @IsOptional()
-  //@Expose()
   login: string;
 }

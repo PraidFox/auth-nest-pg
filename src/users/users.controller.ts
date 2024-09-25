@@ -5,6 +5,7 @@ import {
   Get,
   Param,
   Patch,
+  Post,
   UseGuards,
   UsePipes,
   ValidationPipe,
@@ -13,6 +14,7 @@ import { UsersService } from './users.service';
 import { ApiTags } from '@nestjs/swagger';
 import { UpdateUserDto } from './dto/user.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt.guards';
+import { genSalt, hash } from 'bcryptjs';
 
 @ApiTags('Users')
 @Controller('users')
@@ -26,8 +28,21 @@ export class UsersController {
 
   @Get(`:id`)
   async getUserById(@Param('id') id: number) {
-    //return this.userService.findUserById(id);
-    return this.userService.findUserEmailOrLogin(id.toString());
+    return this.userService.findUserById(id);
+  }
+
+  @Post('user')
+  async getUser(@Body() dto: { emailOrLogin: string; password: string }) {
+    const salt = await genSalt(10);
+
+    const password = await hash(dto.password, salt);
+    console.log(password);
+    const existUser = await this.userService.findUserEmailOrLogin(
+      dto.emailOrLogin,
+    );
+
+    console.log(existUser);
+    return existUser;
   }
 
   @UseGuards(JwtAuthGuard)
@@ -43,7 +58,13 @@ export class UsersController {
 
   @UseGuards(JwtAuthGuard)
   @Delete(':id')
-  async deleteUser(@Param('id') id: string) {
-    return this.userService.deleteUser(id);
+  async removeUser(@Param('id') id: string) {
+    return this.userService.removeUser(id);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Delete(':id')
+  async restoreUser(@Param('id') id: string) {
+    return this.userService.restoreUser(id);
   }
 }
