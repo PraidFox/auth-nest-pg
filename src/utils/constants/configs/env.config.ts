@@ -2,6 +2,7 @@ import * as process from 'process';
 
 export default () => ({
   port: process.env.PORT,
+  url: process.env.URL,
   db: {
     port: process.env.DB_PORT,
     user: process.env.DB_USER,

@@ -21,26 +21,28 @@ export class AuthService {
   async register(dto: RegisterDto) {
     const salt = await genSalt(10);
     dto.password = await hash(dto.password, salt);
-    dto.tokenVerify = `${randomStringGenerator()}-${randomStringGenerator()}`;
+    dto.tokenVerifyEmail = `${randomStringGenerator()}-${randomStringGenerator()}`;
 
     const user = await this.userService.createUser(dto);
     // await this.emailService.verifyEmail(user.email, user.tokenVerify);
     await this.emailService.verifyEmail(
       'hiryrg_94_94@mail.ru',
-      user.tokenVerify,
+      user.tokenVerifyEmail,
       user.id,
     );
 
     return user;
   }
 
-  async verify(token: string, userId: number) {
+  async verifyEmail(token: string, userId: number) {
     const userEntity = await this.userService.findUser({
-      where: [{ id: userId, tokenVerify: token }],
+      where: [{ id: userId, tokenVerifyEmail: token }],
     });
 
     if (userEntity) {
-      userEntity.tokenVerify = null;
+      //TODO сделать проверку, что верефизировал за 1 час?
+
+      userEntity.tokenVerifyEmail = null;
       userEntity.emailVerifiedAt = new Date();
       await userEntity.save();
     } else {
@@ -49,25 +51,21 @@ export class AuthService {
   }
 
   async login(dto: AuthDto) {
-    // const existUser = await this.userService.findUser({
-    //   where: [{ login: dto.emailOrLogin }, { email: dto.emailOrLogin }],
-    // });
-
     const existUser = await this.userService.findUserEmailOrLogin(
       dto.emailOrLogin,
     );
-
     if (!existUser) {
-      throw new UnauthorizedException(MyError.WRONG_LOGIN);
+      throw new UnauthorizedException(MyError.WRONG_IDENTIFICATION);
     }
 
-    const isPasswordValid = await compare(dto.password, existUser.password);
+    const userPassword = (await this.userService.getPassword(existUser.id))
+      .password;
+    const isPasswordValid = await compare(dto.password, userPassword);
     if (!isPasswordValid) {
-      throw new UnauthorizedException(MyError.WRONG_LOGIN);
+      throw new UnauthorizedException(MyError.WRONG_IDENTIFICATION);
     }
 
     const { id, login } = existUser;
-
     const { accessToken, refreshToken } = await this.generateTokens({
       id,
       login,

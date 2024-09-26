@@ -11,7 +11,7 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { AuthService } from './auth.service';
-import { AuthDto, RegisterDto } from './dto/auth.dto';
+import { AuthDto, PasswordResetDto, RegisterDto } from './dto/auth.dto';
 import {
   ApiCreatedResponse,
   ApiOperation,
@@ -37,11 +37,11 @@ export class AuthController {
 
   @ApiCreatedResponse({ type: RegisterResponse })
   @ApiOperation({ summary: 'Проверка подтверждения почты' })
-  @Get('verify')
-  async verify(
+  @Get('verifyEmail')
+  async verifyEmail(
     @Query('') query: { token: string; userId: number },
   ): Promise<{ message: string; verified: boolean }> {
-    await this.authService.verify(query.token, query.userId);
+    await this.authService.verifyEmail(query.token, query.userId);
 
     return { message: 'Почта подтверждена', verified: true };
   }
@@ -51,6 +51,23 @@ export class AuthController {
   @Post('login')
   async login(
     @Body() dto: AuthDto,
+    @Res({ passthrough: true }) res: Response,
+  ): Promise<TokenResponse> {
+    const { token, expire, refreshToken } = await this.authService.login(dto);
+
+    res.cookie('refreshToken', refreshToken, {
+      httpOnly: true,
+      secure: false,
+    });
+
+    return { token, expire };
+  }
+
+  @ApiResponse({ status: 200, type: TokenResponse })
+  @HttpCode(200)
+  @Post('resetPassword')
+  async resetPassword(
+    @Body() dto: PasswordResetDto,
     @Res({ passthrough: true }) res: Response,
   ): Promise<TokenResponse> {
     const { token, expire, refreshToken } = await this.authService.login(dto);

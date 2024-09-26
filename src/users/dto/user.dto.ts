@@ -28,7 +28,7 @@ export class CreateUserDto {
   @ApiHideProperty()
   @IsString()
   @IsOptional()
-  tokenVerify: string;
+  tokenVerifyEmail: string;
 }
 
 export class UpdateUserDto {
@@ -40,5 +40,12 @@ export class UpdateUserDto {
   @ApiProperty()
   @IsString()
   @IsOptional()
+  login: string;
+}
+
+export class TstDto {
+  @IsString()
+  email: string;
+  @IsString()
   login: string;
 }

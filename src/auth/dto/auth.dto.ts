@@ -21,3 +21,9 @@ export class AuthDto {
   @IsString()
   password: string;
 }
+
+export class PasswordResetDto {
+  @ApiProperty()
+  @IsString()
+  emailOrLogin: string;
+}

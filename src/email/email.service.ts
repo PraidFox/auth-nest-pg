@@ -1,9 +1,13 @@
 import { Injectable } from '@nestjs/common';
 import { MailerService } from '@nestjs-modules/mailer';
+import { ConfigService } from '@nestjs/config';
 
 @Injectable()
 export class EmailService {
-  constructor(private readonly mailerService: MailerService) {}
+  constructor(
+    private readonly mailerService: MailerService,
+    private readonly configService: ConfigService,
+  ) {}
   async sendEmail() {
     await this.mailerService.sendMail({
       to: 'hiryrg_94_94@mail.ru',
@@ -23,9 +27,24 @@ export class EmailService {
     await this.mailerService.sendMail({
       to,
       subject: 'Необходимо подтверждение почты',
+      template: 'verificationEmail',
+      context: {
+        url: `${this.configService.get('url')}:${this.configService.get('port')}/api/auth/verify?token=${token}&userId=${userId}`,
+        app_name: 'Наименование приложения',
+        title: 'Спасибо за регистрацию, подтвердите свою почту.',
+        actionTitle: 'Перейдите по ссылке для подтверждения почты',
+      },
+    });
+    return 'email sent';
+  }
+
+  async verifyResetPassword(to: string, token: string, userId: number) {
+    await this.mailerService.sendMail({
+      to,
+      subject: 'Необходимо подтверждение почты',
       template: 'verification',
       context: {
-        url: `http://localhost:5000/api/auth/verify?token=${token}&userId=${userId}`,
+        url: `${this.configService.get('url')}:${this.configService.get('port')}/api/auth/verify?token=${token}&userId=${userId}`,
         app_name: 'Наименование приложения',
         title: 'Спасибо за регистрацию, подтвердите свою почту.',
         actionTitle: 'Перейдите по ссылке для подтверждения почты',

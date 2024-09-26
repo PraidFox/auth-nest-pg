@@ -17,9 +17,23 @@ export class UserEntity extends BaseEntity {
 
   //@ApiProperty()
   @Column({ select: false, nullable: true })
-  tokenVerify: string;
+  tokenVerifyEmail: string;
+
+  @Column({ type: 'timestamp with time zone', nullable: true })
+  whenSendTokenVerifyEmail: Date;
 
   //@ApiHideProperty()
   @Column({ type: 'timestamp with time zone', nullable: true })
   emailVerifiedAt: Date;
+
+  //@ApiProperty()
+  @Column({ select: false, nullable: true })
+  tokenVerifyResetPassword: string;
+
+  @Column({ type: 'timestamp with time zone', nullable: true })
+  whenSendTokenResetPassword: Date;
+
+  //@ApiHideProperty()
+  @Column({ type: 'timestamp with time zone', nullable: true })
+  resetPasswordVerifiedAt: Date;
 }
