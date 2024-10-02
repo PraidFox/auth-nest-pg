@@ -50,6 +50,22 @@ export class AuthService {
     }
   }
 
+  async verifyResetPassword(token: string, userId: number) {
+    const userEntity = await this.userService.findUser({
+      where: [{ id: userId, tokenVerifyResetPassword: token }],
+    });
+
+    if (userEntity) {
+      //TODO сделать проверку, что верефизировал за 1 час?
+
+      userEntity.tokenVerifyResetPassword = null;
+      userEntity.resetPasswordVerifiedAt = new Date();
+      await userEntity.save();
+    } else {
+      throw new UnauthorizedException(MyError.VERIFICATION_FAILED);
+    }
+  }
+
   async login(dto: AuthDto) {
     const existUser = await this.userService.findUserEmailOrLogin(
       dto.emailOrLogin,

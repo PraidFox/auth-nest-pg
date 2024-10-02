@@ -26,4 +26,17 @@ export class PasswordResetDto {
   @ApiProperty()
   @IsString()
   emailOrLogin: string;
+
+  @ApiProperty()
+  @IsString()
+  @IsNotEmpty({ message: MyError.PASSWORD_REPEAT_REQUIRED })
+  @MinLength(6)
+  @Validate(IsPasswordMatching)
+  passwordRepeat: string;
+
+  @ApiProperty()
+  @IsString()
+  @IsNotEmpty({ message: MyError.PASSWORD_REQUIRED })
+  @MinLength(6)
+  password: string;
 }

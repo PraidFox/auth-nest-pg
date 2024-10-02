@@ -46,6 +46,16 @@ export class AuthController {
     return { message: 'Почта подтверждена', verified: true };
   }
 
+  @ApiOperation({ summary: 'Подтверждение сброса пароля' })
+  @Get('verifyResetPassword')
+  async verifyResetPassword(
+    @Query('') query: { token: string; userId: number },
+  ): Promise<{ message: string; verified: boolean }> {
+    await this.authService.verifyResetPassword(query.token, query.userId);
+
+    return { message: 'Почта подтверждена', verified: true };
+  }
+
   @ApiResponse({ status: 200, type: TokenResponse })
   @HttpCode(200)
   @Post('login')
@@ -71,11 +81,6 @@ export class AuthController {
     @Res({ passthrough: true }) res: Response,
   ): Promise<TokenResponse> {
     const { token, expire, refreshToken } = await this.authService.login(dto);
-
-    res.cookie('refreshToken', refreshToken, {
-      httpOnly: true,
-      secure: false,
-    });
 
     return { token, expire };
   }
