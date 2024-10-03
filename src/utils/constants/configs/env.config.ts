@@ -15,6 +15,7 @@ export default () => ({
     secret: process.env.SECRET_JWT,
     expireAccess: process.env.EXPIRE_ACCESS_TOKEN,
     expireRefresh: process.env.EXPIRE_REFRESH_TOKEN,
+    expireVerify: process.env.EXPIRE_VERIFY_TOKEN,
   },
   mail: {
     host: process.env.MAIL_HOST,

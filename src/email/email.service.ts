@@ -29,7 +29,7 @@ export class EmailService {
       subject: 'Необходимо подтверждение почты',
       template: 'verificationEmail',
       context: {
-        url: `${this.configService.get('url')}:${this.configService.get('port')}/api/auth/verify?token=${token}&userId=${userId}`,
+        url: `${this.configService.get('url')}:${this.configService.get('port')}/api/auth/verifyEmail?token=${token}&userId=${userId}`,
         app_name: 'Наименование приложения',
         title: 'Спасибо за регистрацию, подтвердите свою почту.',
         actionTitle: 'Перейдите по ссылке для подтверждения почты',
@@ -44,7 +44,7 @@ export class EmailService {
       subject: 'Необходимо подтвердить смену пароля',
       template: 'verification',
       context: {
-        url: `${this.configService.get('url')}:${this.configService.get('port')}/api/auth/verify?token=${token}&userId=${userId}`,
+        url: `${this.configService.get('url')}:${this.configService.get('port')}/api/auth/verifyResetPassword?token=${token}&userId=${userId}`,
         app_name: 'Наименование приложения',
         title: 'Спасибо за регистрацию, подтвердите свою почту.',
         actionTitle: 'Перейдите по ссылке для подтверждения почты',

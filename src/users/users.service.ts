@@ -7,8 +7,6 @@ import { MyError } from '../utils/constants/errors';
 
 @Injectable()
 export class UsersService {
-  async;
-
   constructor(
     @InjectRepository(UserEntity)
     private usersRepository: Repository<UserEntity>,

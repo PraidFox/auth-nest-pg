@@ -4,6 +4,7 @@ import { BaseEntity } from '../../utils/base.entity';
 @Entity('users')
 export class UserEntity extends BaseEntity {
   //@ApiProperty()
+  //TODO так как логин уникален, в ошибке на проверку есть ли уже такой пользователь, лучше выдавать ошибку что такой пользователь уже есть
   @Column({ unique: true })
   login: string;
 
@@ -15,25 +16,7 @@ export class UserEntity extends BaseEntity {
   @Column({ select: false })
   password: string;
 
-  //@ApiProperty()
-  @Column({ select: false, nullable: true })
-  tokenVerifyEmail: string;
-
-  @Column({ type: 'timestamp with time zone', nullable: true })
-  whenSendTokenVerifyEmail: Date;
-
   //@ApiHideProperty()
   @Column({ type: 'timestamp with time zone', nullable: true })
   emailVerifiedAt: Date;
-
-  //@ApiProperty()
-  @Column({ select: false, nullable: true })
-  tokenVerifyResetPassword: string;
-
-  @Column({ type: 'timestamp with time zone', nullable: true })
-  whenSendTokenResetPassword: Date;
-
-  //@ApiHideProperty()
-  @Column({ type: 'timestamp with time zone', nullable: true })
-  resetPasswordVerifiedAt: Date;
 }

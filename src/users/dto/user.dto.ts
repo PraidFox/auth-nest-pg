@@ -5,7 +5,7 @@ import {
   IsString,
   MinLength,
 } from 'class-validator';
-import { ApiHideProperty, ApiProperty } from '@nestjs/swagger';
+import { ApiProperty } from '@nestjs/swagger';
 import { MyError } from '../../utils/constants/errors';
 
 export class CreateUserDto {
@@ -24,11 +24,6 @@ export class CreateUserDto {
   @IsNotEmpty({ message: MyError.PASSWORD_REQUIRED })
   @MinLength(6)
   password: string;
-
-  @ApiHideProperty()
-  @IsString()
-  @IsOptional()
-  tokenVerifyEmail: string;
 }
 
 export class UpdateUserDto {
@@ -40,12 +35,5 @@ export class UpdateUserDto {
   @ApiProperty()
   @IsString()
   @IsOptional()
-  login: string;
-}
-
-export class TstDto {
-  @IsString()
-  email: string;
-  @IsString()
   login: string;
 }

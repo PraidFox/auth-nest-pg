@@ -7,7 +7,6 @@ import { JwtService } from '@nestjs/jwt';
 import { DataForToken } from '../utils/interfaces';
 import { ConfigService } from '@nestjs/config';
 import { EmailService } from '../email/email.service';
-import { randomStringGenerator } from '@nestjs/common/utils/random-string-generator.util';
 
 @Injectable()
 export class AuthService {
@@ -18,31 +17,28 @@ export class AuthService {
     private readonly emailService: EmailService,
   ) {}
 
-  async register(dto: RegisterDto) {
+  async register(registerDto: RegisterDto) {
     const salt = await genSalt(10);
-    dto.password = await hash(dto.password, salt);
-    dto.tokenVerifyEmail = `${randomStringGenerator()}-${randomStringGenerator()}`;
+    registerDto.password = await hash(registerDto.password, salt);
 
-    const user = await this.userService.createUser(dto);
-    // await this.emailService.verifyEmail(user.email, user.tokenVerify);
+    const user = await this.userService.createUser(registerDto);
+    const verifyToken = await this.generateVerifyToken({ id: user.id });
+
     await this.emailService.verifyEmail(
       'hiryrg_94_94@mail.ru',
-      user.tokenVerifyEmail,
+      verifyToken,
       user.id,
     );
 
     return user;
   }
 
-  async verifyEmail(token: string, userId: number) {
+  async verifyEmail(userId: number) {
     const userEntity = await this.userService.findUser({
-      where: [{ id: userId, tokenVerifyEmail: token }],
+      where: [{ id: userId }],
     });
 
     if (userEntity) {
-      //TODO сделать проверку, что верефизировал за 1 час?
-
-      userEntity.tokenVerifyEmail = null;
       userEntity.emailVerifiedAt = new Date();
       await userEntity.save();
     } else {
@@ -50,16 +46,12 @@ export class AuthService {
     }
   }
 
-  async verifyResetPassword(token: string, userId: number) {
+  async verifyResetPassword(userId: number) {
     const userEntity = await this.userService.findUser({
-      where: [{ id: userId, tokenVerifyResetPassword: token }],
+      where: [{ id: userId }],
     });
 
     if (userEntity) {
-      //TODO сделать проверку, что верефизировал за 1 час?
-
-      userEntity.tokenVerifyResetPassword = null;
-      userEntity.resetPasswordVerifiedAt = new Date();
       await userEntity.save();
     } else {
       throw new UnauthorizedException(MyError.VERIFICATION_FAILED);
@@ -95,30 +87,23 @@ export class AuthService {
     };
   }
 
-  async refresh(token: string) {
-    try {
-      const { id, login } = this.jwtService.verify(token);
+  async refresh({ id, login }: DataForToken) {
+    const { accessToken, refreshToken } = await this.generateTokens({
+      id,
+      login,
+    });
+    const { exp } = this.jwtService.decode(accessToken);
 
-      const { accessToken, refreshToken } = await this.generateTokens({
-        id,
-        login,
-      });
-      const { exp } = this.jwtService.decode(accessToken);
-
-      return {
-        token: accessToken,
-        expire: new Date(exp * 1000),
-        refreshToken: refreshToken,
-      };
-    } catch (error) {
-      throw new UnauthorizedException('Рефреш токен некорректный');
-    }
+    return {
+      token: accessToken,
+      expire: new Date(exp * 1000),
+      refreshToken: refreshToken,
+    };
   }
 
   private async generateTokens({ id, login }: DataForToken) {
     const accessToken = await this.generateAccessToken({ id, login });
     const refreshToken = await this.generateRefreshToken({ id, login });
-
     return { accessToken, refreshToken };
   }
 
@@ -135,6 +120,15 @@ export class AuthService {
     return this.jwtService.signAsync(
       { id, login },
       { expiresIn: this.configService.get('jwt.expireRefresh') },
+    );
+  }
+
+  private async generateVerifyToken({ id }: { id: number }) {
+    return this.jwtService.signAsync(
+      { id },
+      {
+        expiresIn: this.configService.get('jwt.expireVerify'),
+      },
     );
   }
 }
