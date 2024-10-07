@@ -21,41 +21,12 @@ export class AuthService {
     const salt = await genSalt(10);
     registerDto.password = await hash(registerDto.password, salt);
 
-    const user = await this.userService.createUser(registerDto);
-    const verifyToken = await this.generateVerifyToken({ id: user.id });
+    const existUser = await this.userService.createUser(registerDto);
+    const verifyToken = await this.generateVerifyToken({ id: existUser.id });
 
-    await this.emailService.verifyEmail(
-      'hiryrg_94_94@mail.ru',
-      verifyToken,
-      user.id,
-    );
+    await this.emailService.verifyEmail(existUser.email, verifyToken);
 
-    return user;
-  }
-
-  async verifyEmail(userId: number) {
-    const userEntity = await this.userService.findUser({
-      where: [{ id: userId }],
-    });
-
-    if (userEntity) {
-      userEntity.emailVerifiedAt = new Date();
-      await userEntity.save();
-    } else {
-      throw new UnauthorizedException(MyError.VERIFICATION_FAILED);
-    }
-  }
-
-  async verifyResetPassword(userId: number) {
-    const userEntity = await this.userService.findUser({
-      where: [{ id: userId }],
-    });
-
-    if (userEntity) {
-      await userEntity.save();
-    } else {
-      throw new UnauthorizedException(MyError.VERIFICATION_FAILED);
-    }
+    return existUser;
   }
 
   async login(dto: AuthDto) {
@@ -85,6 +56,45 @@ export class AuthService {
       expire: new Date(exp * 1000),
       refreshToken: refreshToken,
     };
+  }
+
+  async verifyEmail(userId: number) {
+    const userEntity = await this.userService.findUser({
+      where: [{ id: userId }],
+    });
+
+    if (userEntity) {
+      userEntity.emailVerifiedAt = new Date();
+      await userEntity.save();
+    } else {
+      throw new UnauthorizedException(MyError.VERIFICATION_FAILED);
+    }
+  }
+
+  async sendMailResetPassword(emailOrLogin: string) {
+    const existUser = await this.userService.findUserEmailOrLogin(emailOrLogin);
+    if (!existUser) {
+      throw new UnauthorizedException(MyError.WRONG_IDENTIFICATION);
+    }
+
+    const verifyToken = await this.generateVerifyToken({ id: existUser.id });
+
+    await this.emailService.verifyResetPassword(
+      existUser.email,
+      verifyToken,
+      existUser.id,
+    );
+  }
+  async verifyResetPassword(userId: number) {
+    const userEntity = await this.userService.findUser({
+      where: [{ id: userId }],
+    });
+
+    if (userEntity) {
+      await userEntity.save();
+    } else {
+      throw new UnauthorizedException(MyError.VERIFICATION_FAILED);
+    }
   }
 
   async refresh({ id, login }: DataForToken) {

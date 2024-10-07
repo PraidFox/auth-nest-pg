@@ -5,6 +5,18 @@ export class RegisterResponse {
   id: number;
 }
 
+export class VerifyResponse {
+  @ApiProperty()
+  message: string;
+  @ApiProperty()
+  verified: boolean;
+}
+
+export class MessageResponse {
+  @ApiProperty()
+  message: string;
+}
+
 export class TokenResponse {
   @ApiProperty()
   token: string;

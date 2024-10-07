@@ -8,9 +8,15 @@ import {
   Req,
   Res,
   UnauthorizedException,
+  UseGuards,
 } from '@nestjs/common';
 import { AuthService } from './auth.service';
-import { AuthDto, RegisterDto } from './dto/auth.dto';
+import {
+  AuthDto,
+  EmailOrLoginDto,
+  PasswordChangeDto,
+  RegisterDto,
+} from './dto/auth.dto';
 import {
   ApiCreatedResponse,
   ApiOperation,
@@ -18,8 +24,16 @@ import {
   ApiTags,
 } from '@nestjs/swagger';
 import { Request, Response } from 'express';
-import { RegisterResponse, TokenResponse } from './dto/responses';
+import {
+  MessageResponse,
+  RegisterResponse,
+  TokenResponse,
+  VerifyResponse,
+} from './dto/responses';
 import { JwtService } from '@nestjs/jwt';
+import { MyError } from '../utils/constants/errors';
+import { JwtAuthGuard } from './guards/jwt.guards';
+import { VerifyEmailQuery } from './dto/querys';
 
 @ApiTags('Auth')
 @Controller('auth')
@@ -37,30 +51,8 @@ export class AuthController {
     return { id: user.id };
   }
 
-  @ApiCreatedResponse({ type: RegisterResponse })
-  @ApiOperation({ summary: 'Проверка подтверждения почты' })
-  @Get('verifyEmail')
-  async verifyEmail(
-    @Query('') query: { token: string },
-  ): Promise<{ message: string; verified: boolean }> {
-    //ПОСТАВИТЬ ТРАЙ КЕТЧ
-    const { id } = this.jwtService.verify(query.token);
-    await this.authService.verifyEmail(id);
-
-    return { message: 'Почта подтверждена', verified: true };
-  }
-
-  @ApiOperation({ summary: 'Подтверждение сброса пароля' })
-  @Get('verifyResetPassword')
-  async verifyResetPassword(
-    @Query('') query: { token: string; userId: number },
-  ): Promise<{ message: string; verified: boolean }> {
-    await this.authService.verifyResetPassword(query.token, query.userId);
-
-    return { message: 'Изменение пароля подтверждено', verified: true };
-  }
-
   @ApiResponse({ status: 200, type: TokenResponse })
+  @ApiOperation({ summary: 'Авторизация пользователя' })
   @HttpCode(200)
   @Post('login')
   async login(
@@ -77,20 +69,9 @@ export class AuthController {
     return { token, expire };
   }
 
-  // @ApiResponse({ status: 200, type: TokenResponse })
-  // @HttpCode(200)
-  // @Post('resetPassword')
-  // async resetPassword(
-  //   @Body() dto: PasswordResetDto,
-  //   @Res({ passthrough: true }) res: Response,
-  // ): Promise<TokenResponse> {
-  //   const { token, expire, refreshToken } = await this.authService.login(dto);
-  //
-  //   return { token, expire };
-  // }
-
   @ApiResponse({ status: 200, type: Boolean })
   @HttpCode(200)
+  @ApiOperation({ summary: 'Разлогинивание пользователя' })
   @Post('logout')
   async logout(
     @Body() id: number,
@@ -105,6 +86,7 @@ export class AuthController {
 
   @ApiResponse({ status: 200, type: TokenResponse })
   @HttpCode(200)
+  @ApiOperation({ summary: 'Генерация новых токенов' })
   @Get('refreshToken')
   async refreshToken(
     @Req() req: Request,
@@ -115,6 +97,7 @@ export class AuthController {
     if (oldRefreshToken) {
       try {
         const { id, login } = this.jwtService.verify(oldRefreshToken);
+
         const { token, expire, refreshToken } = await this.authService.refresh({
           id,
           login,
@@ -132,5 +115,75 @@ export class AuthController {
     } else {
       throw new UnauthorizedException('Рефреш токен не найден');
     }
+  }
+
+  @ApiCreatedResponse({ type: VerifyResponse })
+  @ApiOperation({ summary: 'Подтверждение почты' })
+  @Get('verifyEmail')
+  async verifyEmail(@Query() query: VerifyEmailQuery): Promise<VerifyResponse> {
+    console.log('query', query);
+
+    try {
+      const { id } = this.jwtService.verify(query.token);
+      await this.authService.verifyEmail(id);
+    } catch (error) {
+      if (error.message == 'jwt expired') {
+        throw new UnauthorizedException(MyError.TOKEN_EXPIRED);
+      } else if (error.message == 'invalid token') {
+        throw new UnauthorizedException(MyError.TOKEN_INVALID);
+      }
+    }
+
+    return { message: 'Почта подтверждена', verified: true };
+  }
+
+  @ApiResponse({ status: 200, type: MessageResponse })
+  @HttpCode(200)
+  @Post('sendMailResetPassword')
+  async sendMailResetPassword(
+    @Body() dto: EmailOrLoginDto,
+  ): Promise<{ message: string }> {
+    await this.authService.sendMailResetPassword(dto.emailOrLogin);
+
+    return { message: 'Письмо отправлено' };
+  }
+
+  @ApiCreatedResponse({ type: VerifyResponse })
+  @ApiOperation({ summary: 'Подтверждение сброса пароля' })
+  @Get('verifyResetPassword')
+  async verifyResetPassword(
+    @Query('') query: { token: string },
+  ): Promise<boolean> {
+    try {
+      this.jwtService.verify(query.token);
+    } catch (error) {
+      if (error.message == 'jwt expired') {
+        throw new UnauthorizedException(MyError.TOKEN_EXPIRED);
+      } else if (error.message == 'invalid token') {
+        throw new UnauthorizedException(MyError.TOKEN_INVALID);
+      }
+    }
+
+    return true;
+  }
+
+  // @ApiResponse({ status: 200, type: TokenResponse })
+  // @HttpCode(200)
+  // @Post('resetPassword')
+  // async resetPassword(@Body() dto: PasswordResetDto): Promise<TokenResponse> {
+  //   const { token, expire, refreshToken } = await this.authService.login(dto);
+  //
+  //   return { token, expire };
+  // }
+
+  @ApiResponse({ status: 200, type: TokenResponse })
+  @UseGuards(JwtAuthGuard)
+  @HttpCode(200)
+  @Post('changePassword')
+  async changePassword(
+    @Body() dto: PasswordChangeDto,
+  ): Promise<PasswordChangeDto> {
+    //Поиск пользователя, проверка старого пароля, изменение нового пароля
+    return dto;
   }
 }

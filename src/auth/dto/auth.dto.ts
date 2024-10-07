@@ -22,14 +22,37 @@ export class AuthDto {
   password: string;
 }
 
-export class PasswordResetDto {
+export class EmailOrLoginDto {
   @ApiProperty()
   @IsString()
   emailOrLogin: string;
+}
 
+export class PasswordResetDto {
   @ApiProperty()
   @IsString()
   @IsNotEmpty({ message: MyError.PASSWORD_REQUIRED })
+  @MinLength(6)
+  password: string;
+
+  @ApiProperty()
+  @IsString()
+  @IsNotEmpty({ message: MyError.PASSWORD_REPEAT_REQUIRED })
+  @MinLength(6)
+  @Validate(IsPasswordMatching)
+  passwordRepeat: string;
+}
+
+export class PasswordChangeDto {
+  @ApiProperty()
+  @IsString()
+  @IsNotEmpty({ message: MyError.PASSWORD_REQUIRED })
+  @MinLength(6)
+  currentPassword: string;
+
+  @ApiProperty()
+  @IsString()
+  @IsNotEmpty({ message: MyError.NEW_PASSWORD_REQUIRED })
   @MinLength(6)
   password: string;
 

@@ -23,24 +23,23 @@ export class EmailService {
     return 'email sent';
   }
 
-  async verifyEmail(to: string, token: string, userId: number) {
+  async verifyEmail(to: string, token: string) {
     await this.mailerService.sendMail({
-      to,
+      to: 'hiryrg_94_94@mail.ru',
       subject: 'Необходимо подтверждение почты',
       template: 'verificationEmail',
       context: {
-        url: `${this.configService.get('url')}:${this.configService.get('port')}/api/auth/verifyEmail?token=${token}&userId=${userId}`,
+        url: `${this.configService.get('url')}:${this.configService.get('port')}/api/auth/verifyEmail?token=${token}`,
         app_name: 'Наименование приложения',
         title: 'Спасибо за регистрацию, подтвердите свою почту.',
         actionTitle: 'Перейдите по ссылке для подтверждения почты',
       },
     });
-    return 'email sent';
   }
 
   async verifyResetPassword(to: string, token: string, userId: number) {
     await this.mailerService.sendMail({
-      to,
+      to: 'hiryrg_94_94@mail.ru',
       subject: 'Необходимо подтвердить смену пароля',
       template: 'verification',
       context: {
@@ -50,6 +49,5 @@ export class EmailService {
         actionTitle: 'Перейдите по ссылке для подтверждения почты',
       },
     });
-    return 'email sent';
   }
 }
