@@ -41,7 +41,7 @@ export class EmailService {
     await this.mailerService.sendMail({
       to: 'hiryrg_94_94@mail.ru',
       subject: 'Необходимо подтвердить смену пароля',
-      template: 'verification',
+      template: 'verificationResetPassword',
       context: {
         url: `${this.configService.get('url')}:${this.configService.get('port')}/api/auth/verifyResetPassword?token=${token}&userId=${userId}`,
         app_name: 'Наименование приложения',

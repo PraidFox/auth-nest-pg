@@ -13,6 +13,7 @@ import { ApiTags } from '@nestjs/swagger';
 import { UpdateUserDto } from './dto/user.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt.guards';
 import { Request } from 'express';
+import { InfoUserInToken } from '../auth/dto/auth.dto';
 
 @ApiTags('Users')
 @Controller('users')
@@ -22,7 +23,7 @@ export class UsersController {
   @UseGuards(JwtAuthGuard)
   @Get('me')
   async getMe(@Req() req: Request) {
-    const { id } = req.user as { id: number };
+    const { id } = req.user as InfoUserInToken;
     return this.userService.findUserById(id);
   }
   @Get('all')

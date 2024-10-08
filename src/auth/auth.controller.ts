@@ -14,7 +14,9 @@ import { AuthService } from './auth.service';
 import {
   AuthDto,
   EmailOrLoginDto,
+  InfoUserInToken,
   PasswordChangeDto,
+  PasswordResetDto,
   RegisterDto,
 } from './dto/auth.dto';
 import {
@@ -121,8 +123,6 @@ export class AuthController {
   @ApiOperation({ summary: 'Подтверждение почты' })
   @Get('verifyEmail')
   async verifyEmail(@Query() query: VerifyEmailQuery): Promise<VerifyResponse> {
-    console.log('query', query);
-
     try {
       const { id } = this.jwtService.verify(query.token);
       await this.authService.verifyEmail(id);
@@ -167,22 +167,34 @@ export class AuthController {
     return true;
   }
 
-  // @ApiResponse({ status: 200, type: TokenResponse })
-  // @HttpCode(200)
-  // @Post('resetPassword')
-  // async resetPassword(@Body() dto: PasswordResetDto): Promise<TokenResponse> {
-  //   const { token, expire, refreshToken } = await this.authService.login(dto);
-  //
-  //   return { token, expire };
-  // }
+  @Post('resetPassword')
+  async resetPassword(
+    @Query('') query: { token: string },
+    @Body() dto: PasswordResetDto,
+  ): Promise<void> {
+    try {
+      const { id } = this.jwtService.verify(query.token);
+      await this.authService.resetPassword(id, dto.password);
+    } catch (error) {
+      if (error.message == 'jwt expired') {
+        throw new UnauthorizedException(MyError.TOKEN_EXPIRED);
+      } else if (error.message == 'invalid token') {
+        throw new UnauthorizedException(MyError.TOKEN_INVALID);
+      }
+    }
+  }
 
   @ApiResponse({ status: 200, type: TokenResponse })
   @UseGuards(JwtAuthGuard)
   @HttpCode(200)
   @Post('changePassword')
   async changePassword(
+    @Req() req: Request,
     @Body() dto: PasswordChangeDto,
   ): Promise<PasswordChangeDto> {
+    const { id } = req.user as InfoUserInToken;
+
+    await this.authService.changePassword(id, dto);
     //Поиск пользователя, проверка старого пароля, изменение нового пароля
     return dto;
   }

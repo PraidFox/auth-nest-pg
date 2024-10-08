@@ -2,12 +2,13 @@ import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { UsersService } from '../users/users.service';
 import { MyError } from '../utils/constants/errors';
 import { compare, genSalt, hash } from 'bcryptjs';
-import { AuthDto, RegisterDto } from './dto/auth.dto';
+import { AuthDto, PasswordChangeDto, RegisterDto } from './dto/auth.dto';
 import { JwtService } from '@nestjs/jwt';
 import { DataForToken } from '../utils/interfaces';
 import { ConfigService } from '@nestjs/config';
 import { EmailService } from '../email/email.service';
 
+//TODO вынести хеширование пароля в юзер сервис
 @Injectable()
 export class AuthService {
   constructor(
@@ -40,6 +41,7 @@ export class AuthService {
     const userPassword = (await this.userService.getPassword(existUser.id))
       .password;
     const isPasswordValid = await compare(dto.password, userPassword);
+
     if (!isPasswordValid) {
       throw new UnauthorizedException(MyError.WRONG_IDENTIFICATION);
     }
@@ -64,8 +66,10 @@ export class AuthService {
     });
 
     if (userEntity) {
-      userEntity.emailVerifiedAt = new Date();
-      await userEntity.save();
+      if (userEntity.emailVerifiedAt == null) {
+        userEntity.emailVerifiedAt = new Date();
+        await userEntity.save();
+      }
     } else {
       throw new UnauthorizedException(MyError.VERIFICATION_FAILED);
     }
@@ -85,16 +89,34 @@ export class AuthService {
       existUser.id,
     );
   }
-  async verifyResetPassword(userId: number) {
-    const userEntity = await this.userService.findUser({
-      where: [{ id: userId }],
-    });
-
-    if (userEntity) {
-      await userEntity.save();
-    } else {
-      throw new UnauthorizedException(MyError.VERIFICATION_FAILED);
+  async resetPassword(id: number, password: string) {
+    const existUser = await this.userService.findUserById(id);
+    if (!existUser) {
+      throw new UnauthorizedException(MyError.WRONG_IDENTIFICATION);
     }
+
+    const salt = await genSalt(10);
+    const hashPassword = await hash(password, salt);
+    await this.userService.updatePassword(existUser.id, hashPassword);
+  }
+
+  async changePassword(id: number, dto: PasswordChangeDto) {
+    const existUser = await this.userService.findUserById(id);
+    if (!existUser) {
+      throw new UnauthorizedException(MyError.WRONG_IDENTIFICATION);
+    }
+
+    const userPassword = (await this.userService.getPassword(existUser.id))
+      .password;
+    const isPasswordValid = await compare(dto.currentPassword, userPassword);
+
+    if (!isPasswordValid) {
+      throw new UnauthorizedException(MyError.WRONG_IDENTIFICATION);
+    }
+
+    const salt = await genSalt(10);
+    const hashPassword = await hash(dto.password, salt);
+    await this.userService.updatePassword(existUser.id, hashPassword);
   }
 
   async refresh({ id, login }: DataForToken) {

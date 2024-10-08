@@ -3,6 +3,7 @@ import { ApiProperty } from '@nestjs/swagger';
 import { MyError } from '../../utils/constants/errors';
 import { IsPasswordMatching } from '../../utils/decorators/same-passwords.decorator';
 import { CreateUserDto } from '../../users/dto/user.dto';
+import { UserExistsConstraint } from '../../utils/decorators/user-exists.decorator';
 
 export class RegisterDto extends CreateUserDto {
   @ApiProperty()
@@ -25,6 +26,7 @@ export class AuthDto {
 export class EmailOrLoginDto {
   @ApiProperty()
   @IsString()
+  @Validate(UserExistsConstraint)
   emailOrLogin: string;
 }
 
@@ -62,4 +64,9 @@ export class PasswordChangeDto {
   @MinLength(6)
   @Validate(IsPasswordMatching)
   passwordRepeat: string;
+}
+
+export interface InfoUserInToken {
+  id: number;
+  login: string;
 }

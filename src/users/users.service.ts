@@ -58,6 +58,10 @@ export class UsersService {
     return this.usersRepository.update(id, dto);
   }
 
+  async updatePassword(id: number, password: string) {
+    return this.usersRepository.update(id, { password: password });
+  }
+
   async removeUser(id: string) {
     return await this.usersRepository.softDelete(id);
   }
