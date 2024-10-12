@@ -4,6 +4,7 @@ import {
   Get,
   HttpCode,
   Post,
+  Put,
   Query,
   Req,
   Res,
@@ -36,6 +37,7 @@ import { JwtService } from '@nestjs/jwt';
 import { MyError } from '../utils/constants/errors';
 import { JwtAuthGuard } from './guards/jwt.guards';
 import { VerifyEmailQuery } from './dto/querys';
+import { CookieName } from '../utils/constants/constants';
 
 @ApiTags('Auth')
 @Controller('auth')
@@ -45,67 +47,71 @@ export class AuthController {
     private readonly jwtService: JwtService,
   ) {}
 
-  @ApiCreatedResponse({ type: RegisterResponse })
-  @ApiOperation({ summary: 'Регистрация пользователя' })
   @Post('register')
+  @ApiOperation({ summary: 'Регистрация пользователя' })
+  @ApiCreatedResponse({ type: RegisterResponse })
   async register(@Body() registerDto: RegisterDto): Promise<RegisterResponse> {
     const user = await this.authService.register(registerDto);
     return { id: user.id };
   }
 
-  @ApiResponse({ status: 200, type: TokenResponse })
-  @ApiOperation({ summary: 'Авторизация пользователя' })
-  @HttpCode(200)
   @Post('login')
+  @HttpCode(200)
+  @ApiOperation({ summary: 'Авторизация пользователя' })
+  @ApiResponse({ status: 200, type: TokenResponse })
   async login(
+    @Req() req: Request,
     @Body() dto: AuthDto,
     @Res({ passthrough: true }) res: Response,
   ): Promise<TokenResponse> {
     const { token, expire, refreshToken } = await this.authService.login(dto);
 
-    res.cookie('refreshToken', refreshToken, {
+    const userAgent = req.headers['user-agent'];
+    const sec = req.headers['sec-ch-ua-platform'];
+
+    console.log('userAgent', userAgent);
+    console.log('sec', sec);
+    console.log('req', req);
+
+    res.cookie(CookieName.REFRESH_TOKEN, refreshToken, {
       httpOnly: true,
       secure: false,
     });
-
     return { token, expire };
   }
 
-  @ApiResponse({ status: 200, type: Boolean })
+  @Post('logout')
   @HttpCode(200)
   @ApiOperation({ summary: 'Разлогинивание пользователя' })
-  @Post('logout')
+  @ApiResponse({ status: 200 })
   async logout(
     @Body() id: number,
     @Res({ passthrough: true }) res: Response,
-  ): Promise<boolean> {
-    res.cookie('refreshToken', '', {
+  ): Promise<void> {
+    res.cookie(CookieName.REFRESH_TOKEN, '', {
       httpOnly: true,
       secure: false,
     });
-    return true;
   }
 
-  @ApiResponse({ status: 200, type: TokenResponse })
-  @HttpCode(200)
-  @ApiOperation({ summary: 'Генерация новых токенов' })
   @Get('refreshToken')
+  @ApiResponse({ type: TokenResponse })
+  @ApiOperation({ summary: 'Генерация новых токенов' })
   async refreshToken(
     @Req() req: Request,
     @Res({ passthrough: true }) res: Response,
   ): Promise<TokenResponse> {
-    const oldRefreshToken = req.cookies['refreshToken'];
+    const oldRefreshToken = req.cookies[CookieName.REFRESH_TOKEN];
 
     if (oldRefreshToken) {
       try {
         const { id, login } = this.jwtService.verify(oldRefreshToken);
-
         const { token, expire, refreshToken } = await this.authService.refresh({
           id,
           login,
         });
 
-        res.cookie('refreshToken', refreshToken, {
+        res.cookie(CookieName.REFRESH_TOKEN, refreshToken, {
           httpOnly: true,
           secure: false,
         });
@@ -119,9 +125,10 @@ export class AuthController {
     }
   }
 
-  @ApiCreatedResponse({ type: VerifyResponse })
+  @Put('verifyEmail')
+  @HttpCode(200)
   @ApiOperation({ summary: 'Подтверждение почты' })
-  @Get('verifyEmail')
+  @ApiCreatedResponse({ status: 200, type: VerifyResponse })
   async verifyEmail(@Query() query: VerifyEmailQuery): Promise<VerifyResponse> {
     try {
       const { id } = this.jwtService.verify(query.token);
@@ -137,25 +144,26 @@ export class AuthController {
     return { message: 'Почта подтверждена', verified: true };
   }
 
-  @ApiResponse({ status: 200, type: MessageResponse })
-  @HttpCode(200)
   @Post('sendMailResetPassword')
+  @HttpCode(200)
+  @ApiOperation({ summary: 'Отправка подтверждающего письма для смены пароля' })
+  @ApiResponse({ status: 200, type: MessageResponse })
   async sendMailResetPassword(
     @Body() dto: EmailOrLoginDto,
   ): Promise<{ message: string }> {
     await this.authService.sendMailResetPassword(dto.emailOrLogin);
-
     return { message: 'Письмо отправлено' };
   }
 
-  @ApiCreatedResponse({ type: VerifyResponse })
-  @ApiOperation({ summary: 'Подтверждение сброса пароля' })
-  @Get('verifyResetPassword')
-  async verifyResetPassword(
+  @Get('checkToken')
+  @ApiOperation({ summary: 'Проверка токена' })
+  @ApiCreatedResponse({ status: 200, type: VerifyResponse })
+  async checkToken(
     @Query('') query: { token: string },
-  ): Promise<boolean> {
+  ): Promise<VerifyResponse> {
     try {
       this.jwtService.verify(query.token);
+      return { message: 'Токен корректный', verified: true };
     } catch (error) {
       if (error.message == 'jwt expired') {
         throw new UnauthorizedException(MyError.TOKEN_EXPIRED);
@@ -163,11 +171,10 @@ export class AuthController {
         throw new UnauthorizedException(MyError.TOKEN_INVALID);
       }
     }
-
-    return true;
   }
 
-  @Post('resetPassword')
+  @Put('resetPassword')
+  @ApiOperation({ summary: 'Изменение пароля (по ссылке)' })
   async resetPassword(
     @Query('') query: { token: string },
     @Body() dto: PasswordResetDto,
@@ -184,18 +191,14 @@ export class AuthController {
     }
   }
 
-  @ApiResponse({ status: 200, type: TokenResponse })
+  @Put('changePassword')
+  @ApiOperation({ summary: 'Изменение пароля (зная предыдущий)' })
   @UseGuards(JwtAuthGuard)
-  @HttpCode(200)
-  @Post('changePassword')
   async changePassword(
     @Req() req: Request,
     @Body() dto: PasswordChangeDto,
-  ): Promise<PasswordChangeDto> {
+  ): Promise<void> {
     const { id } = req.user as InfoUserInToken;
-
     await this.authService.changePassword(id, dto);
-    //Поиск пользователя, проверка старого пароля, изменение нового пароля
-    return dto;
   }
 }
