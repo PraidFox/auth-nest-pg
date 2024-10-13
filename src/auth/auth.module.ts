@@ -8,6 +8,9 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { PassportModule } from '@nestjs/passport';
 import { JwtStrategy } from './strategies/jwt.strategy';
 import { EmailModule } from '../email/email.module';
+import { TypeOrmModule } from '@nestjs/typeorm';
+import { UserSessionEntity } from './entities/user-session.entity';
+import { SessionService } from './session.service';
 
 @Module({
   imports: [
@@ -18,9 +21,10 @@ import { EmailModule } from '../email/email.module';
       inject: [ConfigService],
       useFactory: getJwtConfig,
     }),
+    TypeOrmModule.forFeature([UserSessionEntity]),
     PassportModule,
   ],
   controllers: [AuthController],
-  providers: [AuthService, JwtStrategy],
+  providers: [AuthService, SessionService, JwtStrategy],
 })
 export class AuthModule {}

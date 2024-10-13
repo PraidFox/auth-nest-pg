@@ -66,12 +66,9 @@ export class AuthController {
   ): Promise<TokenResponse> {
     const { token, expire, refreshToken } = await this.authService.login(dto);
 
-    const userAgent = req.headers['user-agent'];
-    const sec = req.headers['sec-ch-ua-platform'];
-
-    console.log('userAgent', userAgent);
-    console.log('sec', sec);
-    console.log('req', req);
+    // const userAgent: string = req.headers['user-agent'];
+    // const sec: string | string[] = req.headers['sec-ch-ua-platform'];
+    // const ip: string = req.ip;
 
     res.cookie(CookieName.REFRESH_TOKEN, refreshToken, {
       httpOnly: true,
