@@ -2,7 +2,11 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { UserEntity } from './entities/user.entity';
 import { FindOneOptions, Repository } from 'typeorm';
 import { CreateUserDto, UpdateUserDto } from './dto/user.dto';
-import { BadRequestException, Injectable } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { MyError } from '../utils/constants/errors';
 
 @Injectable()
@@ -25,10 +29,16 @@ export class UsersService {
   }
 
   async findUserById(id: number, fields?: FindOneOptions<UserEntity>) {
-    return this.usersRepository.findOne({
+    const existUser = await this.usersRepository.findOne({
       where: [{ id }],
       ...fields,
     });
+
+    if (!existUser) {
+      throw new NotFoundException(MyError.NOT_FOUND_BY_ID);
+    } else {
+      return existUser;
+    }
   }
 
   async findUser(
@@ -55,18 +65,22 @@ export class UsersService {
   }
 
   async updateUser(id: number, dto: UpdateUserDto) {
+    await this.findUserById(id);
     return this.usersRepository.update(id, dto);
   }
 
   async updatePassword(id: number, password: string) {
+    await this.findUserById(id);
     return this.usersRepository.update(id, { password: password });
   }
 
-  async removeUser(id: string) {
+  async removeUser(id: number) {
+    await this.findUserById(id);
     return await this.usersRepository.softDelete(id);
   }
 
-  async restoreUser(id: string) {
+  async restoreUser(id: number) {
+    await this.findUserById(id);
     return await this.usersRepository.restore(id);
   }
 }

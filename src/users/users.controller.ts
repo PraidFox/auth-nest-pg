@@ -9,31 +9,39 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { UsersService } from './users.service';
-import { ApiTags } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { UpdateUserDto } from './dto/user.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt.guards';
 import { Request } from 'express';
 import { InfoUserInToken } from '../auth/dto/auth.dto';
+import { UserEntity } from './entities/user.entity';
 
 @ApiTags('Users')
+@ApiBearerAuth()
 @Controller('users')
 export class UsersController {
   constructor(private readonly userService: UsersService) {}
 
-  @UseGuards(JwtAuthGuard)
   @Get('me')
+  @ApiResponse({ status: 200, type: UserEntity })
+  @UseGuards(JwtAuthGuard)
   async getMe(@Req() req: Request) {
+    console.log('req', req);
     const { id } = req.user as InfoUserInToken;
     return this.userService.findUserById(id);
   }
+
   @Get('all')
+  @ApiResponse({ status: 200, type: UserEntity, isArray: true })
   async getAllUsers() {
     return this.userService.getUsers();
   }
 
   @Get(`:id`)
+  @ApiResponse({ status: 200, type: UserEntity })
+  @ApiResponse({ status: 404, description: 'User not found' })
   async getUserById(@Param('id') id: number) {
-    return this.userService.findUserById(id);
+    return await this.userService.findUserById(id);
   }
 
   @UseGuards(JwtAuthGuard)
@@ -48,13 +56,13 @@ export class UsersController {
 
   @UseGuards(JwtAuthGuard)
   @Delete(':id/remove')
-  async removeUser(@Param('id') id: string) {
+  async removeUser(@Param('id') id: number) {
     return this.userService.removeUser(id);
   }
 
   @UseGuards(JwtAuthGuard)
   @Patch(':id/restore')
-  async restoreUser(@Param('id') id: string) {
+  async restoreUser(@Param('id') id: number) {
     return this.userService.restoreUser(id);
   }
 }

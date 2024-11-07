@@ -5,21 +5,22 @@ import {
   PrimaryGeneratedColumn,
   UpdateDateColumn,
 } from 'typeorm';
+import { ApiProperty } from '@nestjs/swagger';
 
 export abstract class BaseEntity extends _BaseEntity {
-  //@ApiProperty()
+  @ApiProperty()
   @PrimaryGeneratedColumn()
   id: number;
 
-  //@ApiProperty()
+  @ApiProperty()
   @CreateDateColumn()
   createdAt: Date;
 
-  //@ApiProperty()
+  @ApiProperty()
   @UpdateDateColumn()
   updatedAt: Date;
 
-  //@ApiProperty()
+  @ApiProperty()
   @DeleteDateColumn()
   deletedAt: Date;
 }

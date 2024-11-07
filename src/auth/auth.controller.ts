@@ -38,6 +38,7 @@ import { MyError } from '../utils/constants/errors';
 import { JwtAuthGuard } from './guards/jwt.guards';
 import { VerifyEmailQuery } from './dto/querys';
 import { CookieName } from '../utils/constants/constants';
+import { SessionService } from './session.service';
 
 @ApiTags('Auth')
 @Controller('auth')
@@ -45,6 +46,7 @@ export class AuthController {
   constructor(
     private readonly authService: AuthService,
     private readonly jwtService: JwtService,
+    private readonly sessionService: SessionService,
   ) {}
 
   @Post('register')
@@ -64,16 +66,21 @@ export class AuthController {
     @Body() dto: AuthDto,
     @Res({ passthrough: true }) res: Response,
   ): Promise<TokenResponse> {
-    const { token, expire, refreshToken } = await this.authService.login(dto);
+    const { token, expire, refreshToken, id } =
+      await this.authService.login(dto);
 
-    // const userAgent: string = req.headers['user-agent'];
-    // const sec: string | string[] = req.headers['sec-ch-ua-platform'];
-    // const ip: string = req.ip;
+    const userAgent: string = req.headers['user-agent'];
+    const sec: string | string[] = req.headers['sec-ch-ua-platform'];
+    const ip: string = req.ip;
+
+    const sessionMetadata = userAgent + sec + ip;
+    await this.sessionService.setSession(id, refreshToken, sessionMetadata);
 
     res.cookie(CookieName.REFRESH_TOKEN, refreshToken, {
       httpOnly: true,
       secure: false,
     });
+
     return { token, expire };
   }
 

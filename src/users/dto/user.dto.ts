@@ -5,7 +5,7 @@ import {
   IsString,
   MinLength,
 } from 'class-validator';
-import { ApiProperty } from '@nestjs/swagger';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { MyError } from '../../utils/constants/errors';
 
 export class CreateUserDto {
@@ -27,12 +27,12 @@ export class CreateUserDto {
 }
 
 export class UpdateUserDto {
-  @ApiProperty()
+  @ApiPropertyOptional()
   @IsString()
   @IsOptional()
   email: string;
 
-  @ApiProperty()
+  @ApiPropertyOptional()
   @IsString()
   @IsOptional()
   login: string;

@@ -7,7 +7,8 @@ export class UserSessionEntity {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
-  @ManyToOne(() => UserEntity, (user) => user.id)
+  // @ManyToOne(() => UserEntity, (user) => user)
+  @ManyToOne(() => UserEntity, (user) => user)
   user: UserEntity;
 
   @Column()
