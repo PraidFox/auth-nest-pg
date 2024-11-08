@@ -19,4 +19,8 @@ export const MyError = {
 
   NOT_FOUND: 'По заданным критериям ничего не найдено',
   NOT_FOUND_BY_ID: 'По заданному ID ничего не найдено',
+
+  UPDATE_FAILED: 'Не удалось обновить данные',
+  DELETE_FAILED: 'Не удалось удалить данные',
+  CREATE_FAILED: 'Не удалось создать данные',
 };

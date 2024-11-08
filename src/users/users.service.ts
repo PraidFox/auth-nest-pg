@@ -34,6 +34,8 @@ export class UsersService {
       ...fields,
     });
 
+    return existUser;
+
     if (!existUser) {
       throw new NotFoundException(MyError.NOT_FOUND_BY_ID);
     } else {
@@ -58,6 +60,7 @@ export class UsersService {
   }
 
   async getPassword(id: number) {
+    await this.findUserById(id);
     return this.usersRepository.findOne({
       where: [{ id }],
       select: ['password'],
@@ -66,7 +69,10 @@ export class UsersService {
 
   async updateUser(id: number, dto: UpdateUserDto) {
     await this.findUserById(id);
-    return this.usersRepository.update(id, dto);
+    const result = await this.usersRepository.update(id, dto);
+    if (result.affected == 0) {
+      throw new BadRequestException(MyError.UPDATE_FAILED);
+    }
   }
 
   async updatePassword(id: number, password: string) {

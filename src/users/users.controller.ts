@@ -46,12 +46,14 @@ export class UsersController {
 
   @UseGuards(JwtAuthGuard)
   @Patch(':id')
+  @ApiResponse({ status: 201, description: 'User updated successfully' })
+  @ApiResponse({ status: 404, description: 'User not found' })
+  @ApiResponse({ status: 400, description: 'User not updated' })
   async updateUser(
     @Param('id') id: number,
     @Body() updateDto: UpdateUserDto,
-  ): Promise<UpdateUserDto> {
+  ): Promise<void> {
     await this.userService.updateUser(id, updateDto);
-    return updateDto;
   }
 
   @UseGuards(JwtAuthGuard)
