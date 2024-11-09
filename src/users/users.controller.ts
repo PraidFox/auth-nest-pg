@@ -22,6 +22,7 @@ import { JwtAuthGuard } from '../auth/guards/jwt.guards';
 import { Request } from 'express';
 import { InfoUserInToken } from '../auth/dto/auth.dto';
 import { UserEntity } from './entities/user.entity';
+import { AllUser } from './dto/response.dto';
 
 @ApiTags('Users')
 @ApiBearerAuth()
@@ -40,7 +41,10 @@ export class UsersController {
 
   @Get('all')
   @ApiOperation({ summary: 'Получить всех пользователей' })
-  @ApiResponse({ status: 200, type: UserEntity, isArray: true })
+  @ApiResponse({
+    status: 200,
+    type: AllUser,
+  })
   @ApiQuery({ name: 'withDeleted', required: false })
   @ApiQuery({ name: 'skip', required: false, type: Number })
   @ApiQuery({ name: 'take', required: false, type: Number })
@@ -49,8 +53,7 @@ export class UsersController {
     @Query('take') take = 0,
     @Query('skip') skip = 0,
   ) {
-    //TODO добавить пагинацию
-    return this.userService.getUsers(take, skip, withDeleted);
+    return await this.userService.getUsers(take, skip, withDeleted);
   }
 
   @Get(`:id`)

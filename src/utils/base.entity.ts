@@ -21,6 +21,6 @@ export abstract class BaseEntity extends _BaseEntity {
   updatedAt: Date;
 
   @ApiProperty()
-  @DeleteDateColumn()
+  @DeleteDateColumn({ select: false })
   deletedAt: Date;
 }

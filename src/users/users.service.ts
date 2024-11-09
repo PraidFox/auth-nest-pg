@@ -17,7 +17,7 @@ export class UsersService {
   ) {}
 
   async getUsers(take, skip, withDeleted = false) {
-    const [users, count] = await this.usersRepository.find({
+    const [users, count] = await this.usersRepository.findAndCount({
       withDeleted,
       take,
       skip,

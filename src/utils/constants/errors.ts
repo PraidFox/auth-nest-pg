@@ -24,4 +24,6 @@ export const MyError = {
   DELETE_FAILED: 'Не удалось удалить данные',
   RESTORE_FAILED: 'Не удалось восстановить',
   CREATE_FAILED: 'Не удалось создать данные',
+
+  SUBJECT_REQUIRED: 'Необходимо указать тему письма',
 };

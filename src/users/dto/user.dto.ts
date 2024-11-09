@@ -28,7 +28,7 @@ export class CreateUserDto {
 
 export class UpdateUserDto {
   @ApiPropertyOptional()
-  @IsString()
+  @IsEmail()
   @IsOptional()
   email: string;
 
