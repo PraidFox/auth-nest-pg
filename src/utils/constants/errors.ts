@@ -22,5 +22,6 @@ export const MyError = {
 
   UPDATE_FAILED: 'Не удалось обновить данные',
   DELETE_FAILED: 'Не удалось удалить данные',
+  RESTORE_FAILED: 'Не удалось восстановить',
   CREATE_FAILED: 'Не удалось создать данные',
 };

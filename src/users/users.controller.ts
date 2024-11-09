@@ -5,11 +5,18 @@ import {
   Get,
   Param,
   Patch,
+  Query,
   Req,
   UseGuards,
 } from '@nestjs/common';
 import { UsersService } from './users.service';
-import { ApiBearerAuth, ApiResponse, ApiTags } from '@nestjs/swagger';
+import {
+  ApiBearerAuth,
+  ApiOperation,
+  ApiQuery,
+  ApiResponse,
+  ApiTags,
+} from '@nestjs/swagger';
 import { UpdateUserDto } from './dto/user.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt.guards';
 import { Request } from 'express';
@@ -24,31 +31,46 @@ export class UsersController {
 
   @Get('me')
   @ApiResponse({ status: 200, type: UserEntity })
+  @ApiOperation({ summary: 'Получить текущего пользователя' })
   @UseGuards(JwtAuthGuard)
   async getMe(@Req() req: Request) {
-    console.log('req', req);
     const { id } = req.user as InfoUserInToken;
     return this.userService.findUserById(id);
   }
 
   @Get('all')
+  @ApiOperation({ summary: 'Получить всех пользователей' })
   @ApiResponse({ status: 200, type: UserEntity, isArray: true })
-  async getAllUsers() {
-    return this.userService.getUsers();
+  @ApiQuery({ name: 'withDeleted', required: false })
+  @ApiQuery({ name: 'skip', required: false, type: Number })
+  @ApiQuery({ name: 'take', required: false, type: Number })
+  async getAllUsers(
+    @Query('withDeleted') withDeleted?: boolean,
+    @Query('take') take = 0,
+    @Query('skip') skip = 0,
+  ) {
+    //TODO добавить пагинацию
+    return this.userService.getUsers(take, skip, withDeleted);
   }
 
   @Get(`:id`)
   @ApiResponse({ status: 200, type: UserEntity })
   @ApiResponse({ status: 404, description: 'User not found' })
-  async getUserById(@Param('id') id: number) {
-    return await this.userService.findUserById(id);
+  @ApiOperation({ summary: 'Получить пользователя по id' })
+  @ApiQuery({ name: 'withDeleted', required: false })
+  async getUserById(
+    @Param('id') id: number,
+    @Query('withDeleted') withDeleted?: boolean,
+  ) {
+    return await this.userService.findUserById(id, withDeleted);
   }
 
-  @UseGuards(JwtAuthGuard)
   @Patch(':id')
   @ApiResponse({ status: 201, description: 'User updated successfully' })
   @ApiResponse({ status: 404, description: 'User not found' })
   @ApiResponse({ status: 400, description: 'User not updated' })
+  @ApiOperation({ summary: 'Обновить данные пользователя' })
+  @UseGuards(JwtAuthGuard)
   async updateUser(
     @Param('id') id: number,
     @Body() updateDto: UpdateUserDto,
@@ -56,14 +78,22 @@ export class UsersController {
     await this.userService.updateUser(id, updateDto);
   }
 
-  @UseGuards(JwtAuthGuard)
   @Delete(':id/remove')
+  @ApiResponse({ status: 200, description: 'User to not active' })
+  @ApiResponse({ status: 404, description: 'User not found' })
+  @ApiResponse({ status: 400, description: 'User not updated' })
+  @ApiOperation({ summary: 'Перевести пользователя в неактуально' })
+  @UseGuards(JwtAuthGuard)
   async removeUser(@Param('id') id: number) {
-    return this.userService.removeUser(id);
+    await this.userService.removeUser(id);
   }
 
-  @UseGuards(JwtAuthGuard)
   @Patch(':id/restore')
+  @ApiResponse({ status: 200, description: 'User to active' })
+  @ApiResponse({ status: 404, description: 'User not found' })
+  @ApiResponse({ status: 400, description: 'User not updated' })
+  @ApiOperation({ summary: 'Восстановить пользователя' })
+  @UseGuards(JwtAuthGuard)
   async restoreUser(@Param('id') id: number) {
     return this.userService.restoreUser(id);
   }
