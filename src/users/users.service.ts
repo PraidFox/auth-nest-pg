@@ -42,6 +42,9 @@ export class UsersService {
     withDeleted: boolean = false,
     fields?: FindOneOptions<UserEntity>,
   ) {
+    if (!id) {
+      throw new NotFoundException(MyError.FAIL_ID);
+    }
     const existUser = await this.usersRepository.findOne({
       where: [{ id }],
       withDeleted,

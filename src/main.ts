@@ -4,14 +4,13 @@ import { ConfigService } from '@nestjs/config';
 import { SwaggerModule } from '@nestjs/swagger';
 import { ValidationPipe } from '@nestjs/common';
 import * as cookieParser from 'cookie-parser';
-import { logMiddleware } from './utils/middlewares/loger.middleware';
 import { getSwaggerConfig } from './utils/constants/configs/swagger.config';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
   const configService = app.get<ConfigService>(ConfigService);
   app.use(cookieParser());
-  app.use(logMiddleware);
+  //app.use(logMiddleware);
   app.setGlobalPrefix('api');
   app.useGlobalPipes(
     new ValidationPipe({

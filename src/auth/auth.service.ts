@@ -8,7 +8,6 @@ import { DataForToken } from '../utils/interfaces';
 import { ConfigService } from '@nestjs/config';
 import { EmailService } from '../email/email.service';
 
-//TODO вынести хеширование пароля в юзер сервис
 @Injectable()
 export class AuthService {
   constructor(

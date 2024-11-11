@@ -28,8 +28,6 @@ export class SessionService {
       refreshToken,
     });
 
-    console.log('sessionMetadata: ', sessionMetadata);
-
     // await this.userSessionRepository.find({
     //   relations: { user: userId },
     // });

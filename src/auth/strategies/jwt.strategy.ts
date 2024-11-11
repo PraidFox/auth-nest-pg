@@ -3,7 +3,7 @@ import { ExtractJwt, Strategy } from 'passport-jwt';
 import { ConfigService } from '@nestjs/config';
 import { Injectable } from '@nestjs/common';
 
-//Стратегия при вызове генерации токенов
+//Проверка валидности токена
 @Injectable()
 export class JwtStrategy extends PassportStrategy(Strategy) {
   constructor(private readonly configService: ConfigService) {
@@ -15,6 +15,6 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
   }
 
   async validate(payload: any) {
-    return payload;
+    return 'asdasd';
   }
 }
