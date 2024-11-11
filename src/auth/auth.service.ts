@@ -33,13 +33,14 @@ export class AuthService {
     const existUser = await this.userService.findUserEmailOrLogin(
       dto.emailOrLogin,
     );
+
     if (!existUser) {
       throw new UnauthorizedException(MyError.WRONG_IDENTIFICATION);
     }
 
-    const userPassword = (await this.userService.getPassword(existUser.id))
-      .password;
-    const isPasswordValid = await compare(dto.password, userPassword);
+    const userPassword = await this.userService.getPassword(existUser.id);
+
+    const isPasswordValid = await compare(dto.password, userPassword.password);
 
     if (!isPasswordValid) {
       throw new UnauthorizedException(MyError.WRONG_IDENTIFICATION);
@@ -61,9 +62,7 @@ export class AuthService {
   }
 
   async verifyEmail(userId: number) {
-    const userEntity = await this.userService.findUser({
-      where: [{ id: userId }],
-    });
+    const userEntity = await this.userService.findUserById(userId);
 
     if (userEntity) {
       if (userEntity.emailVerifiedAt == null) {

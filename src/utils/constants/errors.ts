@@ -1,5 +1,6 @@
 export const MyError = {
   FAIL_ID: 'Что-то не то с id',
+  FAIL_PARSE_TOKEN: 'Проверь валидацию токена',
 
   USER_NOT_FOUND: 'Пользователь не найден',
   USER_ALREADY_EXISTS_LOGIN: 'Пользователь c таким логином уже существует',

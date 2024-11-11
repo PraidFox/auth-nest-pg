@@ -35,9 +35,8 @@ export class UsersController {
   @ApiOperation({ summary: 'Получить текущего пользователя' })
   @UseGuards(JwtAuthGuard)
   async getMe(@Req() req: Request) {
-    console.log('req.user', req.user);
     const { id } = req.user as InfoUserInToken;
-    return this.userService.findUserById(id);
+    return this.userService.findUserById(id, true, { password: true });
   }
 
   @Get('all')

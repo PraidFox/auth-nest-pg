@@ -1,6 +1,6 @@
 import { InjectRepository } from '@nestjs/typeorm';
 import { UserEntity } from './entities/user.entity';
-import { FindOneOptions, Repository } from 'typeorm';
+import { Repository } from 'typeorm';
 import { CreateUserDto, UpdateUserDto } from './dto/user.dto';
 import {
   BadRequestException,
@@ -8,6 +8,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { MyError } from '../utils/constants/errors';
+import { FindOptionsSelect } from 'typeorm/find-options/FindOptionsSelect';
 
 @Injectable()
 export class UsersService {
@@ -37,10 +38,11 @@ export class UsersService {
     }
   }
 
+  //TODO делать ли этот метод универсальным с выбором select?
   async findUserById(
     id: number,
     withDeleted: boolean = false,
-    fields?: FindOneOptions<UserEntity>,
+    select?: FindOptionsSelect<UserEntity>,
   ) {
     if (!id) {
       throw new NotFoundException(MyError.FAIL_ID);
@@ -48,7 +50,7 @@ export class UsersService {
     const existUser = await this.usersRepository.findOne({
       where: [{ id }],
       withDeleted,
-      ...fields,
+      select,
     });
 
     if (!existUser) {
@@ -58,28 +60,32 @@ export class UsersService {
     }
   }
 
-  async findUser(
-    where: FindOneOptions<UserEntity>,
-    fields?: FindOneOptions<UserEntity>,
-  ) {
-    return this.usersRepository.findOne({
-      ...where,
-      ...fields,
-    });
-  }
+  // async findUser(
+  //   where: FindOneOptions<UserEntity>,
+  //   fields?: FindOneOptions<UserEntity>,
+  // ) {
+  //   return this.usersRepository.findOne({
+  //     ...where,
+  //     ...fields,
+  //   });
+  // }
 
   async findUserEmailOrLogin(emailOrLogin: string): Promise<UserEntity> {
+    console.log('emailOrLogin', emailOrLogin);
     return this.usersRepository.findOne({
       where: [{ login: emailOrLogin }, { email: emailOrLogin }],
     });
   }
 
   async getPassword(id: number) {
-    await this.findUserById(id);
-    return this.usersRepository.findOne({
+    const user = await this.usersRepository.findOne({
       where: [{ id }],
       select: ['password'],
     });
+
+    if (user) {
+      return user;
+    }
   }
 
   async updateUser(id: number, dto: UpdateUserDto) {
@@ -92,6 +98,7 @@ export class UsersService {
 
   async updatePassword(id: number, password: string) {
     await this.findUserById(id);
+
     const result = await this.usersRepository.update(id, {
       password: password,
     });
