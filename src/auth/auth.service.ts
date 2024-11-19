@@ -38,9 +38,14 @@ export class AuthService {
       throw new UnauthorizedException(MyError.WRONG_IDENTIFICATION);
     }
 
-    const userPassword = await this.userService.getPassword(existUser.id);
+    const userWithPassword = await this.userService.getUserWithPassword(
+      existUser.id,
+    );
 
-    const isPasswordValid = await compare(dto.password, userPassword.password);
+    const isPasswordValid = await compare(
+      dto.password,
+      userWithPassword.password,
+    );
 
     if (!isPasswordValid) {
       throw new UnauthorizedException(MyError.WRONG_IDENTIFICATION);
@@ -88,6 +93,7 @@ export class AuthService {
       existUser.id,
     );
   }
+
   async resetPassword(id: number, password: string) {
     const existUser = await this.userService.findUserById(id);
     const salt = await genSalt(10);
@@ -97,9 +103,14 @@ export class AuthService {
 
   async changePassword(id: number, dto: PasswordChangeDto) {
     const existUser = await this.userService.findUserById(id);
-    const userPassword = (await this.userService.getPassword(existUser.id))
-      .password;
-    const isPasswordValid = await compare(dto.currentPassword, userPassword);
+    const userWithPassword = await this.userService.getUserWithPassword(
+      existUser.id,
+    );
+
+    const isPasswordValid = await compare(
+      dto.currentPassword,
+      userWithPassword.password,
+    );
 
     if (!isPasswordValid) {
       throw new UnauthorizedException(MyError.WRONG_IDENTIFICATION);

@@ -38,7 +38,6 @@ export class UsersService {
     }
   }
 
-  //TODO делать ли этот метод универсальным с выбором select?
   async findUserById(
     id: number,
     withDeleted: boolean = false,
@@ -60,32 +59,19 @@ export class UsersService {
     }
   }
 
-  // async findUser(
-  //   where: FindOneOptions<UserEntity>,
-  //   fields?: FindOneOptions<UserEntity>,
-  // ) {
-  //   return this.usersRepository.findOne({
-  //     ...where,
-  //     ...fields,
-  //   });
-  // }
+  async getUserWithPassword(id: number) {
+    const user = await this.findUserById(id, false, { password: true });
+
+    if (user) {
+      return user;
+    }
+  }
 
   async findUserEmailOrLogin(emailOrLogin: string): Promise<UserEntity> {
     console.log('emailOrLogin', emailOrLogin);
     return this.usersRepository.findOne({
       where: [{ login: emailOrLogin }, { email: emailOrLogin }],
     });
-  }
-
-  async getPassword(id: number) {
-    const user = await this.usersRepository.findOne({
-      where: [{ id }],
-      select: ['password'],
-    });
-
-    if (user) {
-      return user;
-    }
   }
 
   async updateUser(id: number, dto: UpdateUserDto) {
