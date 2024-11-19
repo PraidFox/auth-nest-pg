@@ -36,7 +36,7 @@ export class UsersController {
   @UseGuards(JwtAuthGuard)
   async getMe(@Req() req: Request) {
     const { id } = req.user as InfoUserInToken;
-    return this.userService.findUserById(id);
+    return this.userService.getUserById(id);
   }
 
   @Get('all')
@@ -53,7 +53,7 @@ export class UsersController {
     @Query('take') take = 0,
     @Query('skip') skip = 0,
   ) {
-    return await this.userService.getUsers(take, skip, withDeleted);
+    return await this.userService.getAllUsers(take, skip, withDeleted);
   }
 
   @Get(`:id`)
@@ -65,7 +65,7 @@ export class UsersController {
     @Param('id') id: number,
     @Query('withDeleted') withDeleted?: boolean,
   ) {
-    return await this.userService.findUserById(id, withDeleted);
+    return await this.userService.getUserById(id, withDeleted);
   }
 
   @Patch(':id')

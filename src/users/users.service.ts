@@ -17,7 +17,7 @@ export class UsersService {
     private usersRepository: Repository<UserEntity>,
   ) {}
 
-  async getUsers(take, skip, withDeleted = false) {
+  async getAllUsers(take, skip, withDeleted = false) {
     const [users, count] = await this.usersRepository.findAndCount({
       withDeleted,
       take,
@@ -26,19 +26,7 @@ export class UsersService {
     return { users, count };
   }
 
-  async getOnlyDeleteUsers(withDeleted = true) {
-    return this.usersRepository.find({ withDeleted });
-  }
-
-  async createUser(dto: CreateUserDto) {
-    try {
-      return await this.usersRepository.save(dto);
-    } catch (e) {
-      throw new BadRequestException(MyError.USER_ALREADY_EXISTS_LOGIN);
-    }
-  }
-
-  async findUserById(
+  async getUserById(
     id: number,
     withDeleted: boolean = false,
     select?: FindOptionsSelect<UserEntity>,
@@ -59,31 +47,36 @@ export class UsersService {
     }
   }
 
-  async getUserWithPassword(id: number) {
-    const user = await this.findUserById(id, false, { password: true });
-
-    if (user) {
-      return user;
-    }
+  async getUserWithPassword(id: number): Promise<UserEntity> {
+    return await this.getUserById(id, false, { password: true });
+  }
+  async getOnlyDeleteUsers(withDeleted = true) {
+    return this.usersRepository.find({ withDeleted });
   }
 
   async findUserEmailOrLogin(emailOrLogin: string): Promise<UserEntity> {
-    console.log('emailOrLogin', emailOrLogin);
     return this.usersRepository.findOne({
       where: [{ login: emailOrLogin }, { email: emailOrLogin }],
     });
   }
 
+  async createUser(dto: CreateUserDto): Promise<UserEntity> {
+    try {
+      return await this.usersRepository.save(dto);
+    } catch (e) {
+      throw new BadRequestException(e.message);
+    }
+  }
   async updateUser(id: number, dto: UpdateUserDto) {
-    await this.findUserById(id);
+    await this.getUserById(id);
+
     const result = await this.usersRepository.update(id, dto);
     if (result.affected == 0) {
       throw new BadRequestException(MyError.UPDATE_FAILED);
     }
   }
-
   async updatePassword(id: number, password: string) {
-    await this.findUserById(id);
+    await this.getUserById(id);
 
     const result = await this.usersRepository.update(id, {
       password: password,
@@ -94,7 +87,7 @@ export class UsersService {
   }
 
   async removeUser(id: number) {
-    await this.findUserById(id);
+    await this.getUserById(id);
     const result = await this.usersRepository.softDelete(id);
     if (result.affected == 0) {
       throw new BadRequestException(MyError.DELETE_FAILED);
@@ -102,7 +95,7 @@ export class UsersService {
   }
 
   async restoreUser(id: number) {
-    await this.findUserById(id, true);
+    await this.getUserById(id, true);
     const result = await this.usersRepository.restore(id);
     if (result.affected == 0) {
       throw new BadRequestException(MyError.RESTORE_FAILED);

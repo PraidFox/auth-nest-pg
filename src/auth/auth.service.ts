@@ -29,10 +29,25 @@ export class AuthService {
     return existUser;
   }
 
+  async verifyEmail(userId: number) {
+    const userEntity = await this.userService.getUserById(userId);
+
+    if (userEntity) {
+      if (userEntity.emailVerifiedAt == null) {
+        userEntity.emailVerifiedAt = new Date();
+        await userEntity.save();
+      }
+    } else {
+      throw new UnauthorizedException(MyError.VERIFICATION_FAILED);
+    }
+  }
+
   async login(dto: AuthDto) {
     const existUser = await this.userService.findUserEmailOrLogin(
       dto.emailOrLogin,
     );
+
+    console.log('ver', existUser.emailVerifiedAt);
 
     if (!existUser) {
       throw new UnauthorizedException(MyError.WRONG_IDENTIFICATION);
@@ -66,19 +81,6 @@ export class AuthService {
     };
   }
 
-  async verifyEmail(userId: number) {
-    const userEntity = await this.userService.findUserById(userId);
-
-    if (userEntity) {
-      if (userEntity.emailVerifiedAt == null) {
-        userEntity.emailVerifiedAt = new Date();
-        await userEntity.save();
-      }
-    } else {
-      throw new UnauthorizedException(MyError.VERIFICATION_FAILED);
-    }
-  }
-
   async sendMailResetPassword(emailOrLogin: string) {
     const existUser = await this.userService.findUserEmailOrLogin(emailOrLogin);
     if (!existUser) {
@@ -95,14 +97,14 @@ export class AuthService {
   }
 
   async resetPassword(id: number, password: string) {
-    const existUser = await this.userService.findUserById(id);
+    const existUser = await this.userService.getUserById(id);
     const salt = await genSalt(10);
     const hashPassword = await hash(password, salt);
     await this.userService.updatePassword(existUser.id, hashPassword);
   }
 
   async changePassword(id: number, dto: PasswordChangeDto) {
-    const existUser = await this.userService.findUserById(id);
+    const existUser = await this.userService.getUserById(id);
     const userWithPassword = await this.userService.getUserWithPassword(
       existUser.id,
     );
