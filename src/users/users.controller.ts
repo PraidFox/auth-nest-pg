@@ -1,22 +1,6 @@
-import {
-  Body,
-  Controller,
-  Delete,
-  Get,
-  Param,
-  Patch,
-  Query,
-  Req,
-  UseGuards,
-} from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Patch, Query, Req, UseGuards } from '@nestjs/common';
 import { UsersService } from './users.service';
-import {
-  ApiBearerAuth,
-  ApiOperation,
-  ApiQuery,
-  ApiResponse,
-  ApiTags,
-} from '@nestjs/swagger';
+import { ApiBearerAuth, ApiOperation, ApiQuery, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { UpdateUserDto } from './dto/user.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt.guards';
 import { Request } from 'express';
@@ -61,10 +45,7 @@ export class UsersController {
   @ApiResponse({ status: 404, description: 'User not found' })
   @ApiOperation({ summary: 'Получить пользователя по id' })
   @ApiQuery({ name: 'withDeleted', required: false })
-  async getUserById(
-    @Param('id') id: number,
-    @Query('withDeleted') withDeleted?: boolean,
-  ) {
+  async getUserById(@Param('id') id: number, @Query('withDeleted') withDeleted?: boolean) {
     return await this.userService.getUserById(id, withDeleted);
   }
 
@@ -74,10 +55,7 @@ export class UsersController {
   @ApiResponse({ status: 400, description: 'User not updated' })
   @ApiOperation({ summary: 'Обновить данные пользователя' })
   @UseGuards(JwtAuthGuard)
-  async updateUser(
-    @Param('id') id: number,
-    @Body() updateDto: UpdateUserDto,
-  ): Promise<void> {
+  async updateUser(@Param('id') id: number, @Body() updateDto: UpdateUserDto): Promise<void> {
     await this.userService.updateUser(id, updateDto);
   }
 

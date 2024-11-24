@@ -2,11 +2,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { UserEntity } from './entities/user.entity';
 import { Repository } from 'typeorm';
 import { CreateUserDto, UpdateUserDto } from './dto/user.dto';
-import {
-  BadRequestException,
-  Injectable,
-  NotFoundException,
-} from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { MyError } from '../utils/constants/errors';
 import { FindOptionsSelect } from 'typeorm/find-options/FindOptionsSelect';
 
@@ -26,11 +22,7 @@ export class UsersService {
     return { users, count };
   }
 
-  async getUserById(
-    id: number,
-    withDeleted: boolean = false,
-    select?: FindOptionsSelect<UserEntity>,
-  ) {
+  async getUserById(id: number, withDeleted: boolean = false, select?: FindOptionsSelect<UserEntity>) {
     if (!id) {
       throw new NotFoundException(MyError.FAIL_ID);
     }
@@ -38,6 +30,7 @@ export class UsersService {
       where: [{ id }],
       withDeleted,
       select,
+      relations: ['sessions'],
     });
 
     if (!existUser) {
@@ -50,14 +43,21 @@ export class UsersService {
   async getUserWithPassword(id: number): Promise<UserEntity> {
     return await this.getUserById(id, false, { password: true });
   }
+
   async getOnlyDeleteUsers(withDeleted = true) {
     return this.usersRepository.find({ withDeleted });
   }
 
   async findUserEmailOrLogin(emailOrLogin: string): Promise<UserEntity> {
-    return this.usersRepository.findOne({
+    const existUser = await this.usersRepository.findOne({
       where: [{ login: emailOrLogin }, { email: emailOrLogin }],
     });
+
+    if (!existUser) {
+      throw new NotFoundException(MyError.NOT_FOUND);
+    } else {
+      return existUser;
+    }
   }
 
   async createUser(dto: CreateUserDto): Promise<UserEntity> {
@@ -67,6 +67,7 @@ export class UsersService {
       throw new BadRequestException(e.message);
     }
   }
+
   async updateUser(id: number, dto: UpdateUserDto) {
     await this.getUserById(id);
 
@@ -75,6 +76,7 @@ export class UsersService {
       throw new BadRequestException(MyError.UPDATE_FAILED);
     }
   }
+
   async updatePassword(id: number, password: string) {
     await this.getUserById(id);
 

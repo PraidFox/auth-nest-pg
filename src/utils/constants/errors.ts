@@ -14,10 +14,13 @@ export const MyError = {
   PASSWORD_REPEAT_REQUIRED: 'Необходимо повторить пароль',
   NEW_PASSWORD_REQUIRED: 'Необходимо указать новый пароль',
   PASSWORD_MISMATCH: 'Пароли не совпадают',
+  VERIFICATION_EMAIL_NULL: 'Почта не подтверждена',
+  VERIFICATION_EMAIL_ALREADY: 'Почта уже верефицирована',
 
   VERIFICATION_FAILED: 'Пользователь с таким токеном верификации не найден',
   TOKEN_EXPIRED: 'Время жизни токена подошло к концу',
   TOKEN_INVALID: 'А зачем ты даёшь мне некорректный токен?',
+  TOKEN_COMPROMISED: 'Походу токен был украден',
 
   NOT_FOUND: 'По заданным критериям ничего не найдено',
   NOT_FOUND_BY_ID: 'По заданному ID ничего не найдено',

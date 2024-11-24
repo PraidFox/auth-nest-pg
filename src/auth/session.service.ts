@@ -1,35 +1,77 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { In, Repository } from 'typeorm';
 import { UserSessionEntity } from './entities/user-session.entity';
-import { UsersService } from '../users/users.service';
+import { UserEntity } from '../users/entities/user.entity';
 
 @Injectable()
 export class SessionService {
   constructor(
     @InjectRepository(UserSessionEntity)
     private userSessionRepository: Repository<UserSessionEntity>,
-    private userService: UsersService,
   ) {}
 
-  async setSession(
-    userId: number,
-    refreshToken: string,
-    sessionMetadata: string,
-  ) {
-    // const session = new SessionDto();
-    // session.sessionMetadata = sessionMetadata;
-    // session.refreshToken = refreshToken;
-    // session.userId = userId;
-
-    await this.userSessionRepository.save({
-      user: { id: userId },
+  async setSession(user: UserEntity, sessionMetadata: string): Promise<UserSessionEntity> {
+    const session = await this.userSessionRepository.save({
+      user,
       sessionMetadata,
-      refreshToken,
     });
 
-    // await this.userSessionRepository.find({
-    //   relations: { user: userId },
+    const [sessions, count] = await this.userSessionRepository.findAndCount({
+      where: {
+        user: user,
+      },
+      order: {
+        updatedAt: 'DESC',
+      },
+    });
+
+    if (count > 5) {
+      this.deleteManySessions(sessions.slice(5, count).map((x) => x.id));
+    }
+
+    return session;
+  }
+
+  async updateSession(uuidSession: string, refreshToken: string) {
+    await this.userSessionRepository.update({ id: uuidSession }, { refreshToken });
+  }
+
+  async getSession(uuidSession: string) {
+    const session: UserSessionEntity = await this.userSessionRepository.findOne({
+      where: [{ id: uuidSession }],
+      // relations: { user: true }, //TODO почему так ругается, но в user.service.ts всё норм?
+      relations: ['user'],
+    });
+
+    return session;
+
+    // return await this.userSessionRepository.findOneBy({ id: uuidSession });
+    // return await this.userSessionRepository.findOne({
+    //   where: [{ id: uuidSession }],
+    //   relations: {
+    //     user: true,
+    //   },
     // });
   }
+
+  // async tst() {
+  //   await this.userSessionRepository.find({
+  //     relations: {
+  //       user: true,
+  //     },
+  //   });
+  // }
+
+  async deleteSession(uuidSession: string) {
+    await this.userSessionRepository.delete({ id: uuidSession });
+  }
+
+  async deleteManySessions(uuidSessions: string[]) {
+    await this.userSessionRepository.delete({ id: In(uuidSessions) });
+  }
+
+  // async getSessionsByUserId(userId: number): Promise<UserSessionEntity[]> {
+  //   return await this.userSessionRepository.find({ user: { id: userId } });
+  // }
 }

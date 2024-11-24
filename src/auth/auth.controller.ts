@@ -20,19 +20,9 @@ import {
   PasswordResetDto,
   RegisterDto,
 } from './dto/auth.dto';
-import {
-  ApiCreatedResponse,
-  ApiOperation,
-  ApiResponse,
-  ApiTags,
-} from '@nestjs/swagger';
+import { ApiCreatedResponse, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { Request, Response } from 'express';
-import {
-  MessageResponse,
-  RegisterResponse,
-  TokenResponse,
-  VerifyResponse,
-} from './dto/responses';
+import { MessageResponse, RegisterResponse, TokenResponse, VerifyResponse } from './dto/responses';
 import { JwtService } from '@nestjs/jwt';
 import { MyError } from '../utils/constants/errors';
 import { JwtAuthGuard } from './guards/jwt.guards';
@@ -66,15 +56,9 @@ export class AuthController {
     @Body() dto: AuthDto,
     @Res({ passthrough: true }) res: Response,
   ): Promise<TokenResponse> {
-    const { token, expire, refreshToken, id } =
-      await this.authService.login(dto);
+    const sessionMetadata = this.authService.createMetadata(req);
 
-    const userAgent: string = req.headers['user-agent'];
-    const sec: string | string[] = req.headers['sec-ch-ua-platform'];
-    const ip: string = req.ip;
-
-    const sessionMetadata = userAgent + sec + ip;
-    await this.sessionService.setSession(id, refreshToken, sessionMetadata);
+    const { token, expire, refreshToken } = await this.authService.login(dto, sessionMetadata);
 
     res.cookie(CookieName.REFRESH_TOKEN, refreshToken, {
       httpOnly: true,
@@ -84,14 +68,23 @@ export class AuthController {
     return { token, expire };
   }
 
+  @Get('sendVerifyEmail')
+  @HttpCode(200)
+  @ApiOperation({ summary: 'Отправка письма для верификации' })
+  @ApiResponse({ status: 200 })
+  @UseGuards(JwtAuthGuard)
+  async sendVerifyEmail(@Req() req: Request): Promise<void> {
+    const { id } = req.user as InfoUserInToken;
+    await this.authService.sendVerifyEmail(id);
+  }
+
   @Post('logout')
   @HttpCode(200)
   @ApiOperation({ summary: 'Разлогинивание пользователя' })
   @ApiResponse({ status: 200 })
-  async logout(
-    @Body() id: number,
-    @Res({ passthrough: true }) res: Response,
-  ): Promise<void> {
+  @UseGuards(JwtAuthGuard)
+  async logout(@Body() id: number, @Res({ passthrough: true }) res: Response): Promise<void> {
+    //TODO добавить удаление сессии
     res.cookie(CookieName.REFRESH_TOKEN, '', {
       httpOnly: true,
       secure: false,
@@ -101,19 +94,22 @@ export class AuthController {
   @Get('refreshToken')
   @ApiResponse({ type: TokenResponse })
   @ApiOperation({ summary: 'Генерация новых токенов' })
-  async refreshToken(
-    @Req() req: Request,
-    @Res({ passthrough: true }) res: Response,
-  ): Promise<TokenResponse> {
+  async refreshToken(@Req() req: Request, @Res({ passthrough: true }) res: Response): Promise<TokenResponse> {
     const oldRefreshToken = req.cookies[CookieName.REFRESH_TOKEN];
-
     if (oldRefreshToken) {
       try {
-        const { id, login } = this.jwtService.verify(oldRefreshToken);
-        const { token, expire, refreshToken } = await this.authService.refresh({
-          id,
-          login,
-        });
+        const { id, login, uuidSession } = this.jwtService.verify(oldRefreshToken);
+
+        const sessionMetadata = this.authService.createMetadata(req);
+
+        const { token, expire, refreshToken } = await this.authService.refresh(
+          {
+            id,
+            login,
+            uuidSession,
+          },
+          sessionMetadata,
+        );
 
         res.cookie(CookieName.REFRESH_TOKEN, refreshToken, {
           httpOnly: true,
@@ -122,14 +118,18 @@ export class AuthController {
 
         return { token, expire };
       } catch (error) {
-        throw new UnauthorizedException('Рефреш токен некорректный');
+        if (error.message == 'invalid signature') {
+          throw new UnauthorizedException('Рефреш токен некорректный');
+        } else {
+          throw new UnauthorizedException(error.message);
+        }
       }
     } else {
       throw new UnauthorizedException('Рефреш токен не найден');
     }
   }
 
-  @Put('verifyEmail')
+  @Get('verifyEmail')
   @HttpCode(200)
   @ApiOperation({ summary: 'Подтверждение почты' })
   @ApiCreatedResponse({ status: 200, type: VerifyResponse })
@@ -137,24 +137,21 @@ export class AuthController {
     try {
       const { id } = this.jwtService.verify(query.token);
       await this.authService.verifyEmail(id);
+      return { message: 'Почта подтверждена', verified: true };
     } catch (error) {
       if (error.message == 'jwt expired') {
         throw new UnauthorizedException(MyError.TOKEN_EXPIRED);
-      } else if (error.message == 'invalid token') {
+      } else if (error.message == 'invalid token' || error.message == 'jwt malformed') {
         throw new UnauthorizedException(MyError.TOKEN_INVALID);
       }
     }
-
-    return { message: 'Почта подтверждена', verified: true };
   }
 
   @Post('sendMailResetPassword')
   @HttpCode(200)
   @ApiOperation({ summary: 'Отправка подтверждающего письма для смены пароля' })
   @ApiResponse({ status: 200, type: MessageResponse })
-  async sendMailResetPassword(
-    @Body() dto: EmailOrLoginDto,
-  ): Promise<{ message: string }> {
+  async sendMailResetPassword(@Body() dto: EmailOrLoginDto): Promise<{ message: string }> {
     await this.authService.sendMailResetPassword(dto.emailOrLogin);
     return { message: 'Письмо отправлено' };
   }
@@ -162,9 +159,7 @@ export class AuthController {
   @Get('checkToken')
   @ApiOperation({ summary: 'Проверка токена' })
   @ApiCreatedResponse({ status: 200, type: VerifyResponse })
-  async checkToken(
-    @Query('') query: { token: string },
-  ): Promise<VerifyResponse> {
+  async checkToken(@Query('') query: { token: string }): Promise<VerifyResponse> {
     try {
       this.jwtService.verify(query.token);
       return { message: 'Токен корректный', verified: true };
@@ -179,10 +174,7 @@ export class AuthController {
 
   @Put('resetPassword')
   @ApiOperation({ summary: 'Изменение пароля (по ссылке)' })
-  async resetPassword(
-    @Query('') query: { token: string },
-    @Body() dto: PasswordResetDto,
-  ): Promise<void> {
+  async resetPassword(@Query('') query: { token: string }, @Body() dto: PasswordResetDto): Promise<void> {
     try {
       const { id } = this.jwtService.verify(query.token);
       await this.authService.resetPassword(id, dto.password);
@@ -198,10 +190,7 @@ export class AuthController {
   @Put('changePassword')
   @ApiOperation({ summary: 'Изменение пароля (зная предыдущий)' })
   @UseGuards(JwtAuthGuard)
-  async changePassword(
-    @Req() req: Request,
-    @Body() dto: PasswordChangeDto,
-  ): Promise<void> {
+  async changePassword(@Req() req: Request, @Body() dto: PasswordChangeDto): Promise<void> {
     const { id } = req.user as InfoUserInToken;
     await this.authService.changePassword(id, dto);
   }

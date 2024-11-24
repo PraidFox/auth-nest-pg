@@ -4,9 +4,13 @@ import { MyError } from '../utils/constants/errors';
 import { compare, genSalt, hash } from 'bcryptjs';
 import { AuthDto, PasswordChangeDto, RegisterDto } from './dto/auth.dto';
 import { JwtService } from '@nestjs/jwt';
-import { DataForToken } from '../utils/interfaces';
+import { DataAccessToken, DataAllTokens, DataRefreshToken } from '../utils/interfaces';
 import { ConfigService } from '@nestjs/config';
 import { EmailService } from '../email/email.service';
+import { UserEntity } from '../users/entities/user.entity';
+import { SessionService } from './session.service';
+import { UserSessionEntity } from './entities/user-session.entity';
+import { Request } from 'express';
 
 @Injectable()
 export class AuthService {
@@ -15,62 +19,65 @@ export class AuthService {
     private readonly jwtService: JwtService,
     private readonly configService: ConfigService,
     private readonly emailService: EmailService,
+    private readonly sessionService: SessionService,
   ) {}
 
   async register(registerDto: RegisterDto) {
-    const salt = await genSalt(10);
-    registerDto.password = await hash(registerDto.password, salt);
+    registerDto.password = await this.hashPassword(registerDto.password);
 
-    const existUser = await this.userService.createUser(registerDto);
-    const verifyToken = await this.generateVerifyToken({ id: existUser.id });
-
-    await this.emailService.verifyEmail(existUser.email, verifyToken);
+    const existUser: UserEntity = await this.userService.createUser(registerDto);
+    this.sendVerifyEmail(existUser.id);
 
     return existUser;
   }
 
+  async sendVerifyEmail(userId: number) {
+    const existUser: UserEntity = await this.userService.getUserById(userId);
+
+    if (existUser.emailVerifiedAt) {
+      throw new UnauthorizedException(MyError.VERIFICATION_EMAIL_ALREADY);
+    }
+    const verifyToken: string = await this.generateVerifyToken({
+      id: existUser.id,
+    });
+
+    await this.emailService.verifyEmail(existUser.email, verifyToken);
+  }
+
   async verifyEmail(userId: number) {
     const userEntity = await this.userService.getUserById(userId);
-
     if (userEntity) {
       if (userEntity.emailVerifiedAt == null) {
         userEntity.emailVerifiedAt = new Date();
         await userEntity.save();
+      } else {
+        throw new UnauthorizedException(MyError.VERIFICATION_EMAIL_ALREADY);
       }
     } else {
       throw new UnauthorizedException(MyError.VERIFICATION_FAILED);
     }
   }
 
-  async login(dto: AuthDto) {
-    const existUser = await this.userService.findUserEmailOrLogin(
-      dto.emailOrLogin,
-    );
-
-    console.log('ver', existUser.emailVerifiedAt);
-
-    if (!existUser) {
-      throw new UnauthorizedException(MyError.WRONG_IDENTIFICATION);
-    }
-
-    const userWithPassword = await this.userService.getUserWithPassword(
-      existUser.id,
-    );
-
-    const isPasswordValid = await compare(
-      dto.password,
-      userWithPassword.password,
-    );
+  async login(dto: AuthDto, sessionMetadata: string) {
+    const existUser = await this.userService.findUserEmailOrLogin(dto.emailOrLogin);
+    const userWithPassword = await this.userService.getUserWithPassword(existUser.id);
+    const isPasswordValid = await compare(dto.password, userWithPassword.password);
 
     if (!isPasswordValid) {
       throw new UnauthorizedException(MyError.WRONG_IDENTIFICATION);
     }
 
     const { id, login } = existUser;
+    const sessionInfo = await this.sessionService.setSession(existUser, sessionMetadata);
+
     const { accessToken, refreshToken } = await this.generateTokens({
       id,
       login,
+      uuidSession: sessionInfo.id,
     });
+
+    await this.sessionService.updateSession(sessionInfo.id, refreshToken);
+
     const { exp } = this.jwtService.decode(accessToken);
 
     return {
@@ -81,19 +88,40 @@ export class AuthService {
     };
   }
 
+  createMetadata(req: Request) {
+    const userAgent: string = req.headers['user-agent'];
+    const sec: string | string[] = req.headers['sec-ch-ua-platform'];
+    const ip: string = req.ip;
+
+    return userAgent + sec + ip;
+  }
+
+  async refresh({ id, login, uuidSession }: DataRefreshToken, sessionMetadata: string) {
+    const session: UserSessionEntity = await this.sessionService.getSession(uuidSession);
+
+    if (session.sessionMetadata != sessionMetadata) {
+      throw new UnauthorizedException(MyError.TOKEN_COMPROMISED);
+    }
+
+    const { accessToken, refreshToken } = await this.generateTokens({ id, login, uuidSession });
+
+    this.sessionService.updateSession(session.id, refreshToken);
+
+    const { exp } = this.jwtService.decode(accessToken);
+
+    return {
+      token: accessToken,
+      expire: new Date(exp * 1000),
+      refreshToken: refreshToken,
+    };
+  }
+
   async sendMailResetPassword(emailOrLogin: string) {
     const existUser = await this.userService.findUserEmailOrLogin(emailOrLogin);
-    if (!existUser) {
-      throw new UnauthorizedException(MyError.WRONG_IDENTIFICATION);
-    }
 
     const verifyToken = await this.generateVerifyToken({ id: existUser.id });
 
-    await this.emailService.verifyResetPassword(
-      existUser.email,
-      verifyToken,
-      existUser.id,
-    );
+    await this.emailService.verifyResetPassword(existUser.email, verifyToken, existUser.id);
   }
 
   async resetPassword(id: number, password: string) {
@@ -105,14 +133,9 @@ export class AuthService {
 
   async changePassword(id: number, dto: PasswordChangeDto) {
     const existUser = await this.userService.getUserById(id);
-    const userWithPassword = await this.userService.getUserWithPassword(
-      existUser.id,
-    );
+    const userWithPassword = await this.userService.getUserWithPassword(existUser.id);
 
-    const isPasswordValid = await compare(
-      dto.currentPassword,
-      userWithPassword.password,
-    );
+    const isPasswordValid = await compare(dto.currentPassword, userWithPassword.password);
 
     if (!isPasswordValid) {
       throw new UnauthorizedException(MyError.WRONG_IDENTIFICATION);
@@ -123,27 +146,18 @@ export class AuthService {
     await this.userService.updatePassword(existUser.id, hashPassword);
   }
 
-  async refresh({ id, login }: DataForToken) {
-    const { accessToken, refreshToken } = await this.generateTokens({
-      id,
-      login,
-    });
-    const { exp } = this.jwtService.decode(accessToken);
-
-    return {
-      token: accessToken,
-      expire: new Date(exp * 1000),
-      refreshToken: refreshToken,
-    };
+  private async hashPassword(password: string) {
+    const salt = await genSalt(10);
+    return await hash(password, salt);
   }
 
-  private async generateTokens({ id, login }: DataForToken) {
+  private async generateTokens({ id, login, uuidSession }: DataAllTokens) {
     const accessToken = await this.generateAccessToken({ id, login });
-    const refreshToken = await this.generateRefreshToken({ id, login });
+    const refreshToken = await this.generateRefreshToken({ id, login, uuidSession });
     return { accessToken, refreshToken };
   }
 
-  private async generateAccessToken({ id, login }: DataForToken) {
+  private async generateAccessToken({ id, login }: DataAccessToken) {
     return this.jwtService.signAsync(
       { id, login },
       {
@@ -152,9 +166,9 @@ export class AuthService {
     );
   }
 
-  private async generateRefreshToken({ id, login }: DataForToken) {
+  private async generateRefreshToken({ id, login, uuidSession }: DataRefreshToken) {
     return this.jwtService.signAsync(
-      { id, login },
+      { id, login, uuidSession },
       { expiresIn: this.configService.get('jwt.expireRefresh') },
     );
   }
