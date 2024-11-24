@@ -11,15 +11,15 @@ export class SessionService {
     private userSessionRepository: Repository<UserSessionEntity>,
   ) {}
 
-  async setSession(user: UserEntity, sessionMetadata: string): Promise<UserSessionEntity> {
+  async setSession(userId: number, sessionMetadata: string): Promise<UserSessionEntity> {
     const session = await this.userSessionRepository.save({
-      user,
+      user: { id: userId },
       sessionMetadata,
     });
 
     const [sessions, count] = await this.userSessionRepository.findAndCount({
       where: {
-        user: user,
+        user: { id: userId } as UserEntity, //TODO посмотреть как можно избежать AS
       },
       order: {
         updatedAt: 'DESC',

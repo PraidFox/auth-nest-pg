@@ -20,7 +20,8 @@ export class UsersController {
   @UseGuards(JwtAuthGuard)
   async getMe(@Req() req: Request) {
     const { id } = req.user as InfoUserInToken;
-    return this.userService.getUserById(id);
+    //return this.userService.getUserById(id);
+    return this.userService.getSessionsUser(id);
   }
 
   @Get('all')

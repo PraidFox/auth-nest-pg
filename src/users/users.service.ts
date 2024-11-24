@@ -22,15 +22,23 @@ export class UsersService {
     return { users, count };
   }
 
+  async getSessionsUser(userId: number) {
+    const existUser = await this.usersRepository.findOne({
+      where: [{ id: userId }],
+      relations: { sessions: true },
+    });
+    return existUser;
+  }
+
   async getUserById(id: number, withDeleted: boolean = false, select?: FindOptionsSelect<UserEntity>) {
     if (!id) {
       throw new NotFoundException(MyError.FAIL_ID);
     }
+
     const existUser = await this.usersRepository.findOne({
       where: [{ id }],
       withDeleted,
-      select,
-      relations: ['sessions'],
+      select: { ...select },
     });
 
     if (!existUser) {

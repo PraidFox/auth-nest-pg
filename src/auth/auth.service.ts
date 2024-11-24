@@ -68,7 +68,7 @@ export class AuthService {
     }
 
     const { id, login } = existUser;
-    const sessionInfo = await this.sessionService.setSession(existUser, sessionMetadata);
+    const sessionInfo = await this.sessionService.setSession(id, sessionMetadata);
 
     const { accessToken, refreshToken } = await this.generateTokens({
       id,
