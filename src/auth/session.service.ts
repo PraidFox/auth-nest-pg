@@ -38,30 +38,12 @@ export class SessionService {
   }
 
   async getSession(uuidSession: string) {
-    const session: UserSessionEntity = await this.userSessionRepository.findOne({
+    return await this.userSessionRepository.findOne({
       where: [{ id: uuidSession }],
       // relations: { user: true }, //TODO почему так ругается, но в user.service.ts всё норм?
-      relations: ['user'],
+      //relations: ['user'],
     });
-
-    return session;
-
-    // return await this.userSessionRepository.findOneBy({ id: uuidSession });
-    // return await this.userSessionRepository.findOne({
-    //   where: [{ id: uuidSession }],
-    //   relations: {
-    //     user: true,
-    //   },
-    // });
   }
-
-  // async tst() {
-  //   await this.userSessionRepository.find({
-  //     relations: {
-  //       user: true,
-  //     },
-  //   });
-  // }
 
   async deleteSession(uuidSession: string) {
     await this.userSessionRepository.delete({ id: uuidSession });
