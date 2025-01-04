@@ -26,7 +26,7 @@ export class AuthService {
     registerDto.password = await this.hashPassword(registerDto.password);
 
     const existUser: UserEntity = await this.userService.createUser(registerDto);
-    this.sendVerifyEmail(existUser.id);
+    await this.sendVerifyEmail(existUser.id);
 
     return existUser;
   }
@@ -118,10 +118,16 @@ export class AuthService {
 
   async sendMailResetPassword(emailOrLogin: string) {
     const existUser = await this.userService.findUserEmailOrLogin(emailOrLogin);
-
     const verifyToken = await this.generateVerifyToken({ id: existUser.id });
-
     await this.emailService.verifyResetPassword(existUser.email, verifyToken, existUser.id);
+    return verifyToken;
+  }
+
+  async sendMailChangePassword(userId: number) {
+    const existUser = await this.userService.getUserById(userId);
+    const verifyToken = await this.generateVerifyToken({ id: existUser.id });
+    await this.emailService.verifyResetPassword(existUser.email, verifyToken, existUser.id);
+    return verifyToken;
   }
 
   async resetPassword(id: number, password: string) {
@@ -129,6 +135,13 @@ export class AuthService {
     const salt = await genSalt(10);
     const hashPassword = await hash(password, salt);
     await this.userService.updatePassword(existUser.id, hashPassword);
+  }
+
+  async saveTmpPassword(id: number, password: string) {
+    const existUser = await this.userService.getUserById(id);
+    const salt = await genSalt(10);
+    const hashPassword = await hash(password, salt);
+    await this.userService.updateTmpPassword(existUser.id, hashPassword);
   }
 
   async changePassword(id: number, dto: PasswordChangeDto) {
@@ -144,6 +157,15 @@ export class AuthService {
     const salt = await genSalt(10);
     const hashPassword = await hash(dto.password, salt);
     await this.userService.updatePassword(existUser.id, hashPassword);
+  }
+
+  async generateVerifyToken({ id }: { id: number }) {
+    return this.jwtService.signAsync(
+      { id },
+      {
+        expiresIn: this.configService.get('jwt.expireVerify'),
+      },
+    );
   }
 
   private async hashPassword(password: string) {
@@ -170,15 +192,6 @@ export class AuthService {
     return this.jwtService.signAsync(
       { id, login, uuidSession },
       { expiresIn: this.configService.get('jwt.expireRefresh') },
-    );
-  }
-
-  private async generateVerifyToken({ id }: { id: number }) {
-    return this.jwtService.signAsync(
-      { id },
-      {
-        expiresIn: this.configService.get('jwt.expireVerify'),
-      },
     );
   }
 }

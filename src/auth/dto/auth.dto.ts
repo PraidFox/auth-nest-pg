@@ -13,8 +13,9 @@ export class RegisterDto extends CreateUserDto {
   @Validate(IsPasswordMatching)
   passwordRepeat: string;
 }
+
 export class AuthDto {
-  @ApiProperty()
+  @ApiProperty({ example: 'Мыло или логин' })
   @IsString()
   emailOrLogin: string;
 

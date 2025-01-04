@@ -20,6 +20,9 @@ export class UserEntity extends BaseEntity {
   @Column({ select: false })
   password: string;
 
+  @Column({ select: false, nullable: true })
+  tmpPassword: string;
+
   @ApiProperty()
   @Column({ type: 'timestamp with time zone', nullable: true })
   emailVerifiedAt: Date;

@@ -40,7 +40,7 @@ export class SessionService {
   async getSession(uuidSession: string) {
     return await this.userSessionRepository.findOne({
       where: [{ id: uuidSession }],
-      // relations: { user: true }, //TODO почему так ругается, но в user.service.ts всё норм?
+      //relations: { user: true }, //TODO почему так ругается, но в user.service.ts всё норм?
       //relations: ['user'],
     });
   }

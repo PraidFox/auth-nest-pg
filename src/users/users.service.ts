@@ -23,11 +23,10 @@ export class UsersService {
   }
 
   async getSessionsUser(userId: number) {
-    const existUser = await this.usersRepository.findOne({
+    return await this.usersRepository.findOne({
       where: [{ id: userId }],
       relations: { sessions: true },
     });
-    return existUser;
   }
 
   async getUserById(id: number, withDeleted: boolean = false, select?: FindOptionsSelect<UserEntity>) {
@@ -86,10 +85,21 @@ export class UsersService {
   }
 
   async updatePassword(id: number, password: string) {
-    await this.getUserById(id);
+    //await this.getUserById(id);
 
     const result = await this.usersRepository.update(id, {
-      password: password,
+      password,
+    });
+    if (result.affected == 0) {
+      throw new BadRequestException(MyError.UPDATE_FAILED);
+    }
+  }
+
+  async updateTmpPassword(id: number, tmpPassword: string) {
+    //await this.getUserById(id);
+
+    const result = await this.usersRepository.update(id, {
+      tmpPassword,
     });
     if (result.affected == 0) {
       throw new BadRequestException(MyError.UPDATE_FAILED);

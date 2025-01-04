@@ -43,6 +43,20 @@ export class EmailService {
       subject: 'Необходимо подтвердить смену пароля',
       template: 'verificationResetPassword',
       context: {
+        url: `${this.configService.get('url')}:${this.configService.get('port')}/api/auth/verifyResetPassword?token=${token}&userId=${userId}`, //Перекидывать на страницу смены пароля
+        app_name: 'Наименование приложения',
+        title: 'Спасибо за регистрацию, подтвердите свою почту.',
+        actionTitle: 'Перейдите по ссылке для подтверждения почты',
+      },
+    });
+  }
+
+  async verifyChangePassword(to: string, token: string, userId: number) {
+    await this.mailerService.sendMail({
+      to: 'hiryrg_94_94@mail.ru',
+      subject: 'Необходимо подтвердить смену пароля',
+      template: 'verificationResetPassword',
+      context: {
         url: `${this.configService.get('url')}:${this.configService.get('port')}/api/auth/verifyResetPassword?token=${token}&userId=${userId}`,
         app_name: 'Наименование приложения',
         title: 'Спасибо за регистрацию, подтвердите свою почту.',
