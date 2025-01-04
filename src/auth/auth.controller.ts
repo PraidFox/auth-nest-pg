@@ -125,49 +125,34 @@ export class AuthController {
   @ApiOperation({ summary: 'Изменение пароля (по ссылке)' })
   @ApiQuery({ name: 'token' })
   async resetPassword(@Query('') query: { token: string }, @Body() dto: PasswordResetDto): Promise<void> {
-    try {
-      const { id } = this.jwtService.verify(query.token);
-      await this.authService.resetPassword(id, dto.password);
-    } catch (error) {
-      console.log('query', error.message);
-      if (error.message == 'jwt expired') {
-        throw new UnauthorizedException(MyError.TOKEN_EXPIRED);
-      } else if (error.message == 'invalid token') {
-        throw new UnauthorizedException(MyError.TOKEN_INVALID);
-      } else if (error.message == 'jwt must be provided') {
-        throw new UnauthorizedException(MyError.TOKEN_EMPTY);
-      } else {
-        throw new UnauthorizedException(error.message);
-      }
-    }
+    const { id } = await this.authService.checkToken(query.token);
+    await this.authService.resetPassword(id, dto.password);
   }
 
   @Post('sendMailChangePassword')
   @HttpCode(200)
   @ApiOperation({ summary: 'Отправка подтверждающего письма для изменения пароля' })
   @ApiResponse({ status: 200, type: MessageResponse })
-  //async sendMailChangePassword(@Body() dto: EmailOrLoginDto): Promise<{ message: string }> {
   @UseGuards(JwtAuthGuard)
+  //TODO убрать на проде возврат токена
   async sendMailChangePassword(
     @Req() req: Request,
     @Body() dto: PasswordChangeDto,
   ): Promise<{ message: string }> {
     const { id } = req.user as InfoUserInToken;
-    const promises = [
-      this.authService.sendMailChangePassword(id),
-      this.userService.updateTmpPassword(id, dto.password),
-    ];
-    await Promise.all(promises);
 
-    return { message: 'Письмо отправлено' };
+    const verifyToken = await this.authService.sendMailChangePassword(id);
+    await this.authService.saveTmpPassword(id, dto);
+
+    return { message: 'Письмо отправлено verifyToken: ' + verifyToken };
   }
 
   @Put('changePassword')
   @ApiOperation({ summary: 'Изменение пароля (зная предыдущий)' })
   @UseGuards(JwtAuthGuard)
-  async changePassword(@Req() req: Request, @Body() dto: PasswordChangeDto): Promise<void> {
-    const { id } = req.user as InfoUserInToken;
-    await this.authService.changePassword(id, dto);
+  async changePassword(@Query('') query: { token: string }): Promise<void> {
+    const { id } = await this.authService.checkToken(query.token);
+    await this.authService.changePassword(id);
   }
 
   /** Проверка токена для фронта когда приходит для смены пароля. Да бы можно было узнать не просрочился ли он и если да, то дать об этом инфу пользователю*/
@@ -175,18 +160,7 @@ export class AuthController {
   @ApiOperation({ summary: 'Проверка токена' })
   @ApiCreatedResponse({ status: 200, type: VerifyResponse })
   async checkToken(@Query('') query: { token: string }): Promise<VerifyResponse> {
-    try {
-      this.jwtService.verify(query.token);
-      return { message: 'Токен корректный', verified: true };
-    } catch (error) {
-      if (error.message == 'jwt expired') {
-        throw new UnauthorizedException(MyError.TOKEN_EXPIRED);
-      } else if (error.message == 'invalid token') {
-        throw new UnauthorizedException(MyError.TOKEN_INVALID);
-      } else {
-        throw new UnauthorizedException(error.message);
-      }
-    }
+    return this.authService.checkToken(query.token);
   }
 
   @Get('refreshToken')

@@ -23,7 +23,7 @@ export class AuthService {
   ) {}
 
   async register(registerDto: RegisterDto) {
-    registerDto.password = await this.hashPassword(registerDto.password);
+    registerDto.password = await this.generateHashPassword(registerDto.password);
 
     const existUser: UserEntity = await this.userService.createUser(registerDto);
     await this.sendVerifyEmail(existUser.id);
@@ -119,44 +119,36 @@ export class AuthService {
   async sendMailResetPassword(emailOrLogin: string) {
     const existUser = await this.userService.findUserEmailOrLogin(emailOrLogin);
     const verifyToken = await this.generateVerifyToken({ id: existUser.id });
-    await this.emailService.verifyResetPassword(existUser.email, verifyToken, existUser.id);
+    await this.emailService.verifyResetPassword(existUser.email, verifyToken);
     return verifyToken;
   }
 
   async sendMailChangePassword(userId: number) {
     const existUser = await this.userService.getUserById(userId);
     const verifyToken = await this.generateVerifyToken({ id: existUser.id });
-    await this.emailService.verifyResetPassword(existUser.email, verifyToken, existUser.id);
+    await this.emailService.verifyChangePassword(existUser.email, verifyToken);
     return verifyToken;
   }
 
   async resetPassword(id: number, password: string) {
     const existUser = await this.userService.getUserById(id);
-    const salt = await genSalt(10);
-    const hashPassword = await hash(password, salt);
+    const hashPassword = await this.generateHashPassword(password);
+
     await this.userService.updatePassword(existUser.id, hashPassword);
   }
 
-  async saveTmpPassword(id: number, password: string) {
+  async saveTmpPassword(id: number, dto: PasswordChangeDto) {
     const existUser = await this.userService.getUserById(id);
-    const salt = await genSalt(10);
-    const hashPassword = await hash(password, salt);
+
+    await this.validatePassword(existUser.id, dto.password);
+    const hashPassword = await this.generateHashPassword(dto.password);
+
     await this.userService.updateTmpPassword(existUser.id, hashPassword);
   }
 
-  async changePassword(id: number, dto: PasswordChangeDto) {
-    const existUser = await this.userService.getUserById(id);
-    const userWithPassword = await this.userService.getUserWithPassword(existUser.id);
-
-    const isPasswordValid = await compare(dto.currentPassword, userWithPassword.password);
-
-    if (!isPasswordValid) {
-      throw new UnauthorizedException(MyError.WRONG_IDENTIFICATION);
-    }
-
-    const salt = await genSalt(10);
-    const hashPassword = await hash(dto.password, salt);
-    await this.userService.updatePassword(existUser.id, hashPassword);
+  async changePassword(id: number) {
+    const userWithPassword = await this.userService.getUserWithPassword(id);
+    await this.userService.updatePassword(id, userWithPassword.tmpPassword);
   }
 
   async generateVerifyToken({ id }: { id: number }) {
@@ -168,7 +160,32 @@ export class AuthService {
     );
   }
 
-  private async hashPassword(password: string) {
+  async validatePassword(id: number, password: string) {
+    const userWithPassword = await this.userService.getUserWithPassword(id);
+    const isPasswordValid = await compare(password, userWithPassword.password);
+
+    if (!isPasswordValid) {
+      throw new UnauthorizedException(MyError.WRONG_IDENTIFICATION);
+    }
+  }
+
+  async checkToken(token: string) {
+    try {
+      return this.jwtService.verify(token);
+    } catch (error) {
+      if (error.message == 'jwt expired') {
+        throw new UnauthorizedException(MyError.TOKEN_EXPIRED);
+      } else if (error.message == 'invalid token') {
+        throw new UnauthorizedException(MyError.TOKEN_INVALID);
+      } else if (error.message == 'jwt must be provided') {
+        throw new UnauthorizedException(MyError.TOKEN_EMPTY);
+      } else {
+        throw new UnauthorizedException(error.message);
+      }
+    }
+  }
+
+  async generateHashPassword(password: string) {
     const salt = await genSalt(10);
     return await hash(password, salt);
   }

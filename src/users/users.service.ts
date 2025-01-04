@@ -48,7 +48,7 @@ export class UsersService {
   }
 
   async getUserWithPassword(id: number): Promise<UserEntity> {
-    return await this.getUserById(id, false, { password: true });
+    return await this.getUserById(id, false, { password: true, tmpPassword: true });
   }
 
   async getOnlyDeleteUsers(withDeleted = true) {
@@ -89,6 +89,7 @@ export class UsersService {
 
     const result = await this.usersRepository.update(id, {
       password,
+      tmpPassword: null,
     });
     if (result.affected == 0) {
       throw new BadRequestException(MyError.UPDATE_FAILED);
