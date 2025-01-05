@@ -1,7 +1,7 @@
-import { Injectable, UnauthorizedException } from '@nestjs/common';
+import { ConflictException, Injectable, UnauthorizedException } from '@nestjs/common';
 import { UsersService } from '../users/users.service';
 import { MyError } from '../utils/constants/errors';
-import { compare, genSalt, hash } from 'bcryptjs';
+import { compare } from 'bcryptjs';
 import { AuthDto, PasswordChangeDto, RegisterDto } from './dto/auth.dto';
 import { JwtService } from '@nestjs/jwt';
 import { DataAccessToken, DataAllTokens, DataRefreshToken } from '../utils/interfaces';
@@ -23,25 +23,26 @@ export class AuthService {
   ) {}
 
   async register(registerDto: RegisterDto) {
-    registerDto.password = await this.generateHashPassword(registerDto.password);
+    let user = await this.userService.findUserEmailOrLogin(registerDto.email);
+    if (user) {
+      throw new ConflictException(MyError.USER_ALREADY_EXISTS_EMAIL);
+    }
 
-    const existUser: UserEntity = await this.userService.createUser(registerDto);
-    await this.sendVerifyEmail(existUser.id);
-
-    return existUser;
+    user = await this.userService.findUserEmailOrLogin(registerDto.login);
+    if (user) {
+      throw new ConflictException(MyError.USER_ALREADY_EXISTS_LOGIN);
+    }
+    return await this.userService.createUser(registerDto);
   }
 
-  async sendVerifyEmail(userId: number) {
-    const existUser: UserEntity = await this.userService.getUserById(userId);
-
-    if (existUser.emailVerifiedAt) {
+  async sendVerifyEmail(user: UserEntity) {
+    if (user.emailVerifiedAt) {
       throw new UnauthorizedException(MyError.VERIFICATION_EMAIL_ALREADY);
     }
     const verifyToken: string = await this.generateVerifyToken({
-      id: existUser.id,
+      id: user.id,
     });
-
-    await this.emailService.verifyEmail(existUser.email, verifyToken);
+    await this.emailService.verifyEmail(user.email, verifyToken);
   }
 
   async verifyEmail(userId: number) {
@@ -131,19 +132,13 @@ export class AuthService {
   }
 
   async resetPassword(id: number, password: string) {
-    const existUser = await this.userService.getUserById(id);
-    const hashPassword = await this.generateHashPassword(password);
-
-    await this.userService.updatePassword(existUser.id, hashPassword);
+    await this.userService.updatePassword(id, password);
   }
 
   async saveTmpPassword(id: number, dto: PasswordChangeDto) {
     const existUser = await this.userService.getUserById(id);
 
-    await this.validatePassword(existUser.id, dto.password);
-    const hashPassword = await this.generateHashPassword(dto.password);
-
-    await this.userService.updateTmpPassword(existUser.id, hashPassword);
+    await this.userService.updateTmpPassword(existUser, dto);
   }
 
   async changePassword(id: number) {
@@ -160,15 +155,6 @@ export class AuthService {
     );
   }
 
-  async validatePassword(id: number, password: string) {
-    const userWithPassword = await this.userService.getUserWithPassword(id);
-    const isPasswordValid = await compare(password, userWithPassword.password);
-
-    if (!isPasswordValid) {
-      throw new UnauthorizedException(MyError.WRONG_IDENTIFICATION);
-    }
-  }
-
   async checkToken(token: string) {
     try {
       return this.jwtService.verify(token);
@@ -183,11 +169,6 @@ export class AuthService {
         throw new UnauthorizedException(error.message);
       }
     }
-  }
-
-  async generateHashPassword(password: string) {
-    const salt = await genSalt(10);
-    return await hash(password, salt);
   }
 
   private async generateTokens({ id, login, uuidSession }: DataAllTokens) {

@@ -46,6 +46,8 @@ export class AuthController {
   @ApiCreatedResponse({ type: RegisterResponse })
   async register(@Body() registerDto: RegisterDto): Promise<RegisterResponse> {
     const user = await this.authService.register(registerDto);
+    await this.authService.sendVerifyEmail(user);
+
     return { id: user.id };
   }
 
@@ -56,7 +58,8 @@ export class AuthController {
   @UseGuards(JwtAuthGuard)
   async sendVerifyEmail(@Req() req: Request): Promise<void> {
     const { id } = req.user as InfoUserInToken;
-    await this.authService.sendVerifyEmail(id);
+    const user = await this.userService.getUserById(id);
+    await this.authService.sendVerifyEmail(user);
   }
 
   @Get('verifyEmail')

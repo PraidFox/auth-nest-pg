@@ -2,9 +2,11 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { UserEntity } from './entities/user.entity';
 import { Repository } from 'typeorm';
 import { CreateUserDto, UpdateUserDto } from './dto/user.dto';
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException, UnauthorizedException } from '@nestjs/common';
 import { MyError } from '../utils/constants/errors';
 import { FindOptionsSelect } from 'typeorm/find-options/FindOptionsSelect';
+import { compare, genSalt, hash } from 'bcryptjs';
+import { PasswordChangeDto } from '../auth/dto/auth.dto';
 
 @Injectable()
 export class UsersService {
@@ -67,9 +69,11 @@ export class UsersService {
     }
   }
 
-  async createUser(dto: CreateUserDto): Promise<UserEntity> {
+  /**Захеширует пароль и создаст нового пользователя*/
+  async createUser(registerDto: CreateUserDto): Promise<UserEntity> {
     try {
-      return await this.usersRepository.save(dto);
+      registerDto.password = await this.generateHashPassword(registerDto.password);
+      return await this.usersRepository.save(registerDto);
     } catch (e) {
       throw new BadRequestException(e.message);
     }
@@ -87,8 +91,9 @@ export class UsersService {
   async updatePassword(id: number, password: string) {
     //await this.getUserById(id);
 
+    const hashPassword = await this.generateHashPassword(password);
     const result = await this.usersRepository.update(id, {
-      password,
+      password: hashPassword,
       tmpPassword: null,
     });
     if (result.affected == 0) {
@@ -96,17 +101,25 @@ export class UsersService {
     }
   }
 
-  async updateTmpPassword(id: number, tmpPassword: string) {
+  async updateTmpPassword(user: UserEntity, dto: PasswordChangeDto) {
     //await this.getUserById(id);
 
-    const result = await this.usersRepository.update(id, {
-      tmpPassword,
+    const isValidPassword = await this.validatePassword(user.password, dto.currentPassword);
+    if (!isValidPassword) {
+      throw new UnauthorizedException(MyError.WRONG_IDENTIFICATION);
+    }
+    const hashPassword = await this.generateHashPassword(dto.password);
+
+    const result = await this.usersRepository.update(user.id, {
+      tmpPassword: hashPassword,
     });
+
     if (result.affected == 0) {
       throw new BadRequestException(MyError.UPDATE_FAILED);
     }
   }
 
+  /**Пометить в бд пользователя как неактивным*/
   async removeUser(id: number) {
     await this.getUserById(id);
     const result = await this.usersRepository.softDelete(id);
@@ -115,11 +128,28 @@ export class UsersService {
     }
   }
 
+  /**Совсем удалить пользователя*/
   async restoreUser(id: number) {
     await this.getUserById(id, true);
     const result = await this.usersRepository.restore(id);
     if (result.affected == 0) {
       throw new BadRequestException(MyError.RESTORE_FAILED);
     }
+  }
+
+  /**Хешируем пароль*/
+  private async generateHashPassword(password: string) {
+    const salt = await genSalt(10);
+    return await hash(password, salt);
+  }
+
+  /**
+   * Сравнение паролей
+   * @param {string} existingPassword - Действующий пароль пользователя
+   * @param {string} passwordToCompare - Пароль для сравнения
+   * @returns {boolean} - Результат сравнения пароля
+   */
+  private async validatePassword(existingPassword: string, passwordToCompare: string): Promise<boolean> {
+    return await compare(passwordToCompare, existingPassword);
   }
 }
