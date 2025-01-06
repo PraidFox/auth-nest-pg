@@ -2,21 +2,19 @@ import { ConflictException, Injectable, UnauthorizedException } from '@nestjs/co
 import { UsersService } from '../users/users.service';
 import { MyError } from '../utils/constants/errors';
 import { AuthDto, PasswordChangeDto, RegisterDto } from './dto/auth.dto';
-import { JwtService } from '@nestjs/jwt';
-import { DataAccessToken, DataAllTokens, DataRefreshToken } from '../utils/interfaces';
-import { ConfigService } from '@nestjs/config';
+import { DataRefreshToken, DecodedAccessToken } from '../utils/interfaces';
 import { EmailService } from '../email/email.service';
-import { UserEntity } from '../users/entities/user.entity';
+import { UserNotPassword } from '../users/entities/user.entity';
 import { SessionService } from './session.service';
 import { UserSessionEntity } from './entities/user-session.entity';
 import { Request } from 'express';
+import { TokenService } from './token.service';
 
 @Injectable()
 export class AuthService {
   constructor(
     private readonly userService: UsersService,
-    private readonly jwtService: JwtService,
-    private readonly configService: ConfigService,
+    private readonly tokenService: TokenService,
     private readonly emailService: EmailService,
     private readonly sessionService: SessionService,
   ) {}
@@ -37,11 +35,11 @@ export class AuthService {
     return await this.userService.createUser(registerDto);
   }
 
-  async sendVerifyEmail(user: UserEntity) {
+  async sendVerifyEmail(user: UserNotPassword) {
     if (user.emailVerifiedAt) {
       throw new UnauthorizedException(MyError.VERIFICATION_EMAIL_ALREADY);
     }
-    const verifyToken: string = await this.generateVerifyToken({
+    const verifyToken: string = await this.tokenService.generateVerifyToken({
       id: user.id,
     });
     await this.emailService.verifyEmail(user.email, verifyToken);
@@ -65,19 +63,21 @@ export class AuthService {
   async login(dto: AuthDto, sessionMetadata: string) {
     const sessionInfo = await this.sessionService.setSession(dto, sessionMetadata);
 
-    const { accessToken, refreshToken } = await this.generateTokens({
+    console.log('uuidSession', sessionInfo.id);
+
+    const { accessToken, refreshToken } = await this.tokenService.generateTokens({
       id: sessionInfo.user.id,
       login: sessionInfo.user.login,
       uuidSession: sessionInfo.id,
     });
 
-    const { exp } = this.jwtService.decode(accessToken);
+    const { exp } = this.tokenService.decodeToken<DecodedAccessToken>(accessToken);
 
     return {
       token: accessToken,
       expire: new Date(exp * 1000),
       refreshToken: refreshToken,
-      id: sessionInfo.user.id,
+      userId: sessionInfo.user.id,
     };
   }
 
@@ -94,9 +94,9 @@ export class AuthService {
     if (session.sessionMetadata != sessionMetadata) {
       throw new UnauthorizedException(MyError.TOKEN_COMPROMISED);
     }
-    const { accessToken, refreshToken } = await this.generateTokens({ id, login, uuidSession });
+    const { accessToken, refreshToken } = await this.tokenService.generateTokens({ id, login, uuidSession });
     //this.sessionService.updateSession(session.id, refreshToken);
-    const { exp } = this.jwtService.decode(accessToken);
+    const { exp } = this.tokenService.decodeToken<DecodedAccessToken>(accessToken);
     return {
       token: accessToken,
       expire: new Date(exp * 1000),
@@ -106,14 +106,14 @@ export class AuthService {
 
   async sendMailResetPassword(emailOrLogin: string) {
     const existUser = await this.userService.findUserEmailOrLogin(emailOrLogin);
-    const verifyToken = await this.generateVerifyToken({ id: existUser.id });
+    const verifyToken = await this.tokenService.generateVerifyToken({ id: existUser.id });
     await this.emailService.verifyResetPassword(existUser.email, verifyToken);
     return verifyToken;
   }
 
   async sendMailChangePassword(userId: number) {
     const existUser = await this.userService.getUserById(userId);
-    const verifyToken = await this.generateVerifyToken({ id: existUser.id });
+    const verifyToken = await this.tokenService.generateVerifyToken({ id: existUser.id });
     await this.emailService.verifyChangePassword(existUser.email, verifyToken);
     return verifyToken;
   }
@@ -123,60 +123,13 @@ export class AuthService {
   }
 
   async saveTmpPassword(id: number, dto: PasswordChangeDto) {
-    const existUser = await this.userService.getUserById(id);
+    const existUser = await this.userService.getUserByIdWithPassword(id);
 
     await this.userService.updateTmpPassword(existUser, dto);
   }
 
   async changePassword(id: number) {
-    const userWithPassword = await this.userService.getUserWithPassword(id);
+    const userWithPassword = await this.userService.getUserByIdWithPassword(id);
     await this.userService.updatePassword(id, userWithPassword.tmpPassword);
-  }
-
-  async generateVerifyToken({ id }: { id: number }) {
-    return this.jwtService.signAsync(
-      { id },
-      {
-        expiresIn: this.configService.get('jwt.expireVerify'),
-      },
-    );
-  }
-
-  async checkToken(token: string) {
-    try {
-      return this.jwtService.verify(token);
-    } catch (error) {
-      if (error.message == 'jwt expired') {
-        throw new UnauthorizedException(MyError.TOKEN_EXPIRED);
-      } else if (error.message == 'invalid token') {
-        throw new UnauthorizedException(MyError.TOKEN_INVALID);
-      } else if (error.message == 'jwt must be provided') {
-        throw new UnauthorizedException(MyError.TOKEN_EMPTY);
-      } else {
-        throw new UnauthorizedException(error.message);
-      }
-    }
-  }
-
-  private async generateTokens({ id, login, uuidSession }: DataAllTokens) {
-    const accessToken = await this.generateAccessToken({ id, login });
-    const refreshToken = await this.generateRefreshToken({ id, login, uuidSession });
-    return { accessToken, refreshToken };
-  }
-
-  private async generateAccessToken({ id, login }: DataAccessToken) {
-    return this.jwtService.signAsync(
-      { id, login },
-      {
-        expiresIn: this.configService.get('jwt.expireAccess'),
-      },
-    );
-  }
-
-  private async generateRefreshToken({ id, login, uuidSession }: DataRefreshToken) {
-    return this.jwtService.signAsync(
-      { id, login, uuidSession },
-      { expiresIn: this.configService.get('jwt.expireRefresh') },
-    );
   }
 }

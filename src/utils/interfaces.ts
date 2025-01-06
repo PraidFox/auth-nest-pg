@@ -8,3 +8,12 @@ export interface DataRefreshToken extends DataAccessToken {
 }
 
 export interface DataAllTokens extends DataRefreshToken {}
+
+export interface DecodedAccessToken extends DataAccessToken {
+  exp: number;
+  iat: number;
+}
+
+export interface DecodedRefreshToken extends DecodedAccessToken {
+  uuidSession: string;
+}

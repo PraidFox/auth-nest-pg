@@ -31,3 +31,5 @@ export class UserEntity extends BaseEntity {
   @OneToMany(() => UserSessionEntity, (session) => session.user)
   sessions: UserSessionEntity[];
 }
+
+export interface UserNotPassword extends Omit<UserEntity, 'password' | 'tmpPassword'> {}

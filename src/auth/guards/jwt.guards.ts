@@ -13,7 +13,6 @@ export class JwtAuthGuard extends AuthGuard('jwt') {
       throw new UnauthorizedException(info.message);
     }
 
-    console.log('user', user);
     // !user.uuidSession
     if (!user.id || !user.login) {
       throw new UnauthorizedException(MyError.FAIL_PARSE_TOKEN);

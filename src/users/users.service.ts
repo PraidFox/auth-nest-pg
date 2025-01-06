@@ -1,10 +1,9 @@
 import { InjectRepository } from '@nestjs/typeorm';
-import { UserEntity } from './entities/user.entity';
+import { UserEntity, UserNotPassword } from './entities/user.entity';
 import { Repository } from 'typeorm';
 import { CreateUserDto, UpdateUserDto } from './dto/user.dto';
 import { BadRequestException, Injectable, NotFoundException, UnauthorizedException } from '@nestjs/common';
 import { MyError } from '../utils/constants/errors';
-import { FindOptionsSelect } from 'typeorm/find-options/FindOptionsSelect';
 import { compare, genSalt, hash } from 'bcryptjs';
 import { PasswordChangeDto } from '../auth/dto/auth.dto';
 
@@ -31,7 +30,7 @@ export class UsersService {
     });
   }
 
-  async getUserById(id: number, withDeleted: boolean = false, select?: FindOptionsSelect<UserEntity>) {
+  async getUserById(id: number, withDeleted: boolean = false): Promise<UserNotPassword> {
     if (!id) {
       throw new NotFoundException(MyError.FAIL_ID);
     }
@@ -39,7 +38,6 @@ export class UsersService {
     const existUser = await this.usersRepository.findOne({
       where: [{ id }],
       withDeleted,
-      select: { ...select },
     });
 
     if (!existUser) {
@@ -49,21 +47,26 @@ export class UsersService {
     }
   }
 
-  async getUserWithPassword(id: number): Promise<UserEntity> {
-    return await this.getUserById(id, false, { password: true, tmpPassword: true });
+  async getUserByIdWithPassword(id: number): Promise<UserEntity> {
+    if (!id) {
+      throw new NotFoundException(MyError.FAIL_ID);
+    }
+
+    const existUser = await this.usersRepository.findOne({
+      where: [{ id }],
+      select: this.usersRepository.metadata.propertiesMap,
+    });
+
+    if (!existUser) {
+      throw new NotFoundException(MyError.NOT_FOUND_BY_ID);
+    } else {
+      return existUser;
+    }
   }
 
-  async getOnlyDeleteUsers(withDeleted = true) {
-    return this.usersRepository.find({ withDeleted });
-  }
-
-  async findUserEmailOrLogin(
-    emailOrLogin: string,
-    select?: FindOptionsSelect<UserEntity>,
-  ): Promise<UserEntity> {
+  async findUserEmailOrLogin(emailOrLogin: string): Promise<UserNotPassword> {
     const existUser = await this.usersRepository.findOne({
       where: [{ login: emailOrLogin }, { email: emailOrLogin }],
-      select: { ...select },
     });
 
     if (!existUser) {
@@ -71,6 +74,23 @@ export class UsersService {
     } else {
       return existUser;
     }
+  }
+
+  async findUserByEmailOrLoginWithPassword(emailOrLogin: string): Promise<UserEntity> {
+    const existUser = await this.usersRepository.findOne({
+      where: [{ login: emailOrLogin }, { email: emailOrLogin }],
+      select: this.usersRepository.metadata.propertiesMap,
+    });
+
+    if (!existUser) {
+      throw new NotFoundException(MyError.NOT_FOUND);
+    } else {
+      return existUser;
+    }
+  }
+
+  async getOnlyDeleteUsers(withDeleted = true) {
+    return this.usersRepository.find({ withDeleted });
   }
 
   /**Захеширует пароль и создаст нового пользователя*/
@@ -156,4 +176,34 @@ export class UsersService {
     const salt = await genSalt(10);
     return await hash(password, salt);
   }
+
+  // async getUserByIdOrEmailOrLogin(
+  //   idOrEmailOrLogin: number | string,
+  //   withPassword: boolean = false,
+  //   withDeleted: boolean = false,
+  // ): Promise<UserEntity | UserNotPassword> {
+  //   const where = typeof idOrEmailOrLogin === 'number'
+  //     ? [{ id: idOrEmailOrLogin }]
+  //     : [{ login: idOrEmailOrLogin }, { email: idOrEmailOrLogin }];
+  //
+  //   const select = withPassword
+  //     ? this.usersRepository.metadata.propertiesMap
+  //     : undefined;
+  //
+  //   const existUser = await this.usersRepository.findOne({
+  //     where,
+  //     withDeleted,
+  //     select,
+  //   });
+  //
+  //   if (!existUser) {
+  //     throw new NotFoundException(
+  //       typeof idOrEmailOrLogin === 'number'
+  //         ? MyError.NOT_FOUND_BY_ID
+  //         : MyError.NOT_FOUND,
+  //     );
+  //   } else {
+  //     return withPassword ? existUser : existUser as UserNotPassword;
+  //   }
+  // }
 }

@@ -17,7 +17,7 @@ export class SessionService {
 
   /** Проверка соответствия пароля, запись сессии (если больше 5 одну удалим)*/
   async setSession(dto: AuthDto, sessionMetadata: string): Promise<UserSessionEntity> {
-    const user = await this.userService.findUserEmailOrLogin(dto.emailOrLogin, { password: true });
+    const user = await this.userService.findUserByEmailOrLoginWithPassword(dto.emailOrLogin);
 
     const isPasswordValid = await this.userService.validatePassword(user.password, dto.password);
     if (!isPasswordValid) {
@@ -25,7 +25,7 @@ export class SessionService {
     }
 
     const session = await this.userSessionRepository.save({
-      user: { id: user.id },
+      user: user,
       sessionMetadata,
     });
 

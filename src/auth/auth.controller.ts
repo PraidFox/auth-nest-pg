@@ -30,6 +30,8 @@ import { VerifyEmailQuery } from './dto/querys';
 import { CookieName } from '../utils/constants/constants';
 import { SessionService } from './session.service';
 import { UsersService } from '../users/users.service';
+import { DataRefreshToken, DecodedRefreshToken } from '../utils/interfaces';
+import { TokenService } from './token.service';
 
 @ApiTags('Auth')
 @Controller('auth')
@@ -39,6 +41,7 @@ export class AuthController {
     private readonly jwtService: JwtService,
     private readonly sessionService: SessionService,
     private readonly userService: UsersService,
+    private readonly tokenService: TokenService,
   ) {}
 
   @Post('register')
@@ -97,7 +100,6 @@ export class AuthController {
       secure: false,
     });
 
-    console.log('token', token);
     return { token, expire };
   }
 
@@ -105,15 +107,15 @@ export class AuthController {
   @HttpCode(200)
   @ApiOperation({ summary: 'Разлогинивание пользователя' })
   @ApiResponse({ status: 200 })
-  @UseGuards(JwtAuthGuard)
+  // @UseGuards(JwtAuthGuard)
   async logout(
     @Req() req: Request,
     @Body() id: number,
     @Res({ passthrough: true }) res: Response,
   ): Promise<void> {
-    //TODO добавить удаление сессии
     const oldRefreshToken = req.cookies[CookieName.REFRESH_TOKEN];
-    console.log('Я тут', oldRefreshToken);
+    const { uuidSession } = this.jwtService.verify<DecodedRefreshToken>(oldRefreshToken);
+    await this.sessionService.deleteSession(uuidSession);
 
     res.cookie(CookieName.REFRESH_TOKEN, '', {
       httpOnly: true,
@@ -135,7 +137,7 @@ export class AuthController {
   @ApiOperation({ summary: 'Изменение пароля (по ссылке)' })
   @ApiQuery({ name: 'token' })
   async resetPassword(@Query('') query: { token: string }, @Body() dto: PasswordResetDto): Promise<void> {
-    const { id } = await this.authService.checkToken(query.token);
+    const { id } = await this.tokenService.checkToken(query.token);
     await this.authService.resetPassword(id, dto.password);
   }
 
@@ -161,7 +163,7 @@ export class AuthController {
   @ApiOperation({ summary: 'Изменение пароля (зная предыдущий)' })
   @UseGuards(JwtAuthGuard)
   async changePassword(@Query('') query: { token: string }): Promise<void> {
-    const { id } = await this.authService.checkToken(query.token);
+    const { id } = await this.tokenService.checkToken(query.token);
     await this.authService.changePassword(id);
   }
 
@@ -170,17 +172,17 @@ export class AuthController {
   @ApiOperation({ summary: 'Проверка токена' })
   @ApiCreatedResponse({ status: 200, type: VerifyResponse })
   async checkToken(@Query('') query: { token: string }): Promise<VerifyResponse> {
-    return this.authService.checkToken(query.token);
+    return this.tokenService.checkToken(query.token);
   }
 
   @Get('refreshToken')
   @ApiResponse({ type: TokenResponse })
   @ApiOperation({ summary: 'Генерация новых токенов' })
   async refreshToken(@Req() req: Request, @Res({ passthrough: true }) res: Response): Promise<TokenResponse> {
-    const oldRefreshToken = req.cookies[CookieName.REFRESH_TOKEN];
+    const oldRefreshToken: string = req.cookies[CookieName.REFRESH_TOKEN];
     if (oldRefreshToken) {
       try {
-        const { id, login, uuidSession } = this.jwtService.verify(oldRefreshToken);
+        const { id, login, uuidSession } = this.jwtService.verify(oldRefreshToken) as DataRefreshToken;
 
         const sessionMetadata = this.authService.createMetadata(req);
 
