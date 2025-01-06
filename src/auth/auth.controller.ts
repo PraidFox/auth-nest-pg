@@ -12,14 +12,7 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { AuthService } from './auth.service';
-import {
-  AuthDto,
-  EmailOrLoginDto,
-  InfoUserInToken,
-  PasswordChangeDto,
-  PasswordResetDto,
-  RegisterDto,
-} from './dto/auth.dto';
+import { AuthDto, EmailOrLoginDto, PasswordChangeDto, PasswordResetDto, RegisterDto } from './dto/auth.dto';
 import { ApiCreatedResponse, ApiOperation, ApiQuery, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { Request, Response } from 'express';
 import { MessageResponse, RegisterResponse, TokenResponse, VerifyResponse } from './dto/responses';
@@ -30,7 +23,7 @@ import { VerifyEmailQuery } from './dto/querys';
 import { CookieName } from '../utils/constants/constants';
 import { SessionService } from './session.service';
 import { UsersService } from '../users/users.service';
-import { DataRefreshToken, DecodedRefreshToken } from '../utils/interfaces';
+import { DataRefreshToken, DecodedAccessToken, DecodedRefreshToken } from '../utils/interfaces';
 import { TokenService } from './token.service';
 
 @ApiTags('Auth')
@@ -60,7 +53,7 @@ export class AuthController {
   @ApiResponse({ status: 200 })
   @UseGuards(JwtAuthGuard)
   async sendVerifyEmail(@Req() req: Request): Promise<string> {
-    const { id } = req.user as InfoUserInToken;
+    const { id } = req.user as DecodedAccessToken;
     const user = await this.userService.getUserById(id);
     return await this.authService.sendVerifyEmail(user);
   }
@@ -151,7 +144,7 @@ export class AuthController {
     @Req() req: Request,
     @Body() dto: PasswordChangeDto,
   ): Promise<{ message: string }> {
-    const { id } = req.user as InfoUserInToken;
+    const { id } = req.user as DecodedAccessToken;
 
     const verifyToken = await this.authService.sendMailChangePassword(id);
     await this.authService.saveTmpPassword(id, dto);

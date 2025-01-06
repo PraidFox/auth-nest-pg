@@ -66,8 +66,3 @@ export class PasswordChangeDto {
   @Validate(IsPasswordMatching)
   passwordRepeat: string;
 }
-
-export interface InfoUserInToken {
-  id: number;
-  login: string;
-}

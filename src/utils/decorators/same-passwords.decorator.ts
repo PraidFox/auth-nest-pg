@@ -1,8 +1,4 @@
-import {
-  ValidationArguments,
-  ValidatorConstraint,
-  ValidatorConstraintInterface,
-} from 'class-validator';
+import { ValidationArguments, ValidatorConstraint, ValidatorConstraintInterface } from 'class-validator';
 import { RegisterDto } from '../../auth/dto/auth.dto';
 import { MyError } from '../constants/errors';
 

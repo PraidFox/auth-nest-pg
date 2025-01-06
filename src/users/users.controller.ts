@@ -6,7 +6,7 @@ import { JwtAuthGuard } from '../auth/guards/jwt.guards';
 import { Request } from 'express';
 import { UserEntity } from './entities/user.entity';
 import { AllUser } from './dto/response.dto';
-import { InfoUserInToken } from '../auth/dto/auth.dto';
+import { DecodedAccessToken } from '../utils/interfaces';
 
 @ApiTags('Users')
 @ApiBearerAuth()
@@ -19,8 +19,8 @@ export class UsersController {
   @ApiOperation({ summary: 'Получить текущего пользователя' })
   @UseGuards(JwtAuthGuard)
   async getMe(@Req() req: Request) {
-    const { id } = req.user as InfoUserInToken;
-    //return this.userService.getUserById(id);
+    console.log('req.user', req.user);
+    const { id } = req.user as DecodedAccessToken;
     return this.userService.getSessionsUser(id);
   }
 
