@@ -17,8 +17,8 @@ export class UserSessionEntity extends BaseEntity {
   @ApiProperty()
   @Column()
   sessionMetadata: string;
-
-  @ApiProperty()
-  @Column({ nullable: true })
-  refreshToken: string;
+  //
+  // @ApiProperty()
+  // @Column({ nullable: true })
+  // refreshToken: string;
 }

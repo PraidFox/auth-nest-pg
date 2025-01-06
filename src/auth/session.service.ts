@@ -1,25 +1,37 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { In, Repository } from 'typeorm';
 import { UserSessionEntity } from './entities/user-session.entity';
 import { UserEntity } from '../users/entities/user.entity';
+import { AuthDto } from './dto/auth.dto';
+import { UsersService } from '../users/users.service';
+import { MyError } from '../utils/constants/errors';
 
 @Injectable()
 export class SessionService {
   constructor(
     @InjectRepository(UserSessionEntity)
     private userSessionRepository: Repository<UserSessionEntity>,
+    private userService: UsersService,
   ) {}
 
-  async setSession(userId: number, sessionMetadata: string): Promise<UserSessionEntity> {
+  /** Проверка соответствия пароля, запись сессии (если больше 5 одну удалим)*/
+  async setSession(dto: AuthDto, sessionMetadata: string): Promise<UserSessionEntity> {
+    const user = await this.userService.findUserEmailOrLogin(dto.emailOrLogin, { password: true });
+
+    const isPasswordValid = await this.userService.validatePassword(user.password, dto.password);
+    if (!isPasswordValid) {
+      throw new UnauthorizedException(MyError.WRONG_IDENTIFICATION);
+    }
+
     const session = await this.userSessionRepository.save({
-      user: { id: userId },
+      user: { id: user.id },
       sessionMetadata,
     });
 
     const [sessions, count] = await this.userSessionRepository.findAndCount({
       where: {
-        user: { id: userId } as UserEntity, //TODO посмотреть как можно избежать AS
+        user: { id: user.id } as UserEntity, //TODO посмотреть как можно избежать AS
       },
       order: {
         updatedAt: 'DESC',
@@ -33,9 +45,9 @@ export class SessionService {
     return session;
   }
 
-  async updateSession(uuidSession: string, refreshToken: string) {
-    await this.userSessionRepository.update({ id: uuidSession }, { refreshToken });
-  }
+  // async updateSession(uuidSession: string, refreshToken: string) {
+  //   await this.userSessionRepository.update({ id: uuidSession }, { refreshToken });
+  // }
 
   async getSession(uuidSession: string) {
     return await this.userSessionRepository.findOne({

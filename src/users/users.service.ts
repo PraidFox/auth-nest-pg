@@ -57,9 +57,13 @@ export class UsersService {
     return this.usersRepository.find({ withDeleted });
   }
 
-  async findUserEmailOrLogin(emailOrLogin: string): Promise<UserEntity> {
+  async findUserEmailOrLogin(
+    emailOrLogin: string,
+    select?: FindOptionsSelect<UserEntity>,
+  ): Promise<UserEntity> {
     const existUser = await this.usersRepository.findOne({
       where: [{ login: emailOrLogin }, { email: emailOrLogin }],
+      select: { ...select },
     });
 
     if (!existUser) {
@@ -137,19 +141,19 @@ export class UsersService {
     }
   }
 
-  /**Хешируем пароль*/
-  private async generateHashPassword(password: string) {
-    const salt = await genSalt(10);
-    return await hash(password, salt);
-  }
-
   /**
    * Сравнение паролей
    * @param {string} existingPassword - Действующий пароль пользователя
    * @param {string} passwordToCompare - Пароль для сравнения
    * @returns {boolean} - Результат сравнения пароля
    */
-  private async validatePassword(existingPassword: string, passwordToCompare: string): Promise<boolean> {
+  async validatePassword(existingPassword: string, passwordToCompare: string): Promise<boolean> {
     return await compare(passwordToCompare, existingPassword);
+  }
+
+  /**Хешируем пароль*/
+  private async generateHashPassword(password: string) {
+    const salt = await genSalt(10);
+    return await hash(password, salt);
   }
 }

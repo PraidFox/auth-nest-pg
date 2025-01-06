@@ -1,7 +1,6 @@
 import { ConflictException, Injectable, UnauthorizedException } from '@nestjs/common';
 import { UsersService } from '../users/users.service';
 import { MyError } from '../utils/constants/errors';
-import { compare } from 'bcryptjs';
 import { AuthDto, PasswordChangeDto, RegisterDto } from './dto/auth.dto';
 import { JwtService } from '@nestjs/jwt';
 import { DataAccessToken, DataAllTokens, DataRefreshToken } from '../utils/interfaces';
@@ -23,15 +22,18 @@ export class AuthService {
   ) {}
 
   async register(registerDto: RegisterDto) {
+    //Поиск пользователя по почте
     let user = await this.userService.findUserEmailOrLogin(registerDto.email);
     if (user) {
       throw new ConflictException(MyError.USER_ALREADY_EXISTS_EMAIL);
     }
 
+    //Поиск пользователя по логину
     user = await this.userService.findUserEmailOrLogin(registerDto.login);
     if (user) {
       throw new ConflictException(MyError.USER_ALREADY_EXISTS_LOGIN);
     }
+
     return await this.userService.createUser(registerDto);
   }
 
@@ -43,6 +45,7 @@ export class AuthService {
       id: user.id,
     });
     await this.emailService.verifyEmail(user.email, verifyToken);
+    return verifyToken;
   }
 
   async verifyEmail(userId: number) {
@@ -60,24 +63,13 @@ export class AuthService {
   }
 
   async login(dto: AuthDto, sessionMetadata: string) {
-    const existUser = await this.userService.findUserEmailOrLogin(dto.emailOrLogin);
-    const userWithPassword = await this.userService.getUserWithPassword(existUser.id);
-    const isPasswordValid = await compare(dto.password, userWithPassword.password);
-
-    if (!isPasswordValid) {
-      throw new UnauthorizedException(MyError.WRONG_IDENTIFICATION);
-    }
-
-    const { id, login } = existUser;
-    const sessionInfo = await this.sessionService.setSession(id, sessionMetadata);
+    const sessionInfo = await this.sessionService.setSession(dto, sessionMetadata);
 
     const { accessToken, refreshToken } = await this.generateTokens({
-      id,
-      login,
+      id: sessionInfo.user.id,
+      login: sessionInfo.user.login,
       uuidSession: sessionInfo.id,
     });
-
-    await this.sessionService.updateSession(sessionInfo.id, refreshToken);
 
     const { exp } = this.jwtService.decode(accessToken);
 
@@ -85,7 +77,7 @@ export class AuthService {
       token: accessToken,
       expire: new Date(exp * 1000),
       refreshToken: refreshToken,
-      id: id,
+      id: sessionInfo.user.id,
     };
   }
 
@@ -99,17 +91,12 @@ export class AuthService {
 
   async refresh({ id, login, uuidSession }: DataRefreshToken, sessionMetadata: string) {
     const session: UserSessionEntity = await this.sessionService.getSession(uuidSession);
-
     if (session.sessionMetadata != sessionMetadata) {
       throw new UnauthorizedException(MyError.TOKEN_COMPROMISED);
     }
-
     const { accessToken, refreshToken } = await this.generateTokens({ id, login, uuidSession });
-
-    this.sessionService.updateSession(session.id, refreshToken);
-
+    //this.sessionService.updateSession(session.id, refreshToken);
     const { exp } = this.jwtService.decode(accessToken);
-
     return {
       token: accessToken,
       expire: new Date(exp * 1000),

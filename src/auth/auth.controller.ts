@@ -56,10 +56,10 @@ export class AuthController {
   @ApiOperation({ summary: 'Отправка письма для верификации' })
   @ApiResponse({ status: 200 })
   @UseGuards(JwtAuthGuard)
-  async sendVerifyEmail(@Req() req: Request): Promise<void> {
+  async sendVerifyEmail(@Req() req: Request): Promise<string> {
     const { id } = req.user as InfoUserInToken;
     const user = await this.userService.getUserById(id);
-    await this.authService.sendVerifyEmail(user);
+    return await this.authService.sendVerifyEmail(user);
   }
 
   @Get('verifyEmail')
@@ -90,7 +90,6 @@ export class AuthController {
     @Res({ passthrough: true }) res: Response,
   ): Promise<TokenResponse> {
     const sessionMetadata = this.authService.createMetadata(req);
-
     const { token, expire, refreshToken } = await this.authService.login(dto, sessionMetadata);
 
     res.cookie(CookieName.REFRESH_TOKEN, refreshToken, {
@@ -98,6 +97,7 @@ export class AuthController {
       secure: false,
     });
 
+    console.log('token', token);
     return { token, expire };
   }
 
@@ -106,8 +106,15 @@ export class AuthController {
   @ApiOperation({ summary: 'Разлогинивание пользователя' })
   @ApiResponse({ status: 200 })
   @UseGuards(JwtAuthGuard)
-  async logout(@Body() id: number, @Res({ passthrough: true }) res: Response): Promise<void> {
+  async logout(
+    @Req() req: Request,
+    @Body() id: number,
+    @Res({ passthrough: true }) res: Response,
+  ): Promise<void> {
     //TODO добавить удаление сессии
+    const oldRefreshToken = req.cookies[CookieName.REFRESH_TOKEN];
+    console.log('Я тут', oldRefreshToken);
+
     res.cookie(CookieName.REFRESH_TOKEN, '', {
       httpOnly: true,
       secure: false,
