@@ -12,19 +12,21 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { AuthService } from './auth.service';
-import { AuthDto, EmailOrLoginDto, PasswordChangeDto, PasswordResetDto, RegisterDto } from './dto/auth.dto';
+import { AuthDto, PasswordChangeDto, PasswordResetDto, RegisterDto } from './dto/auth.dto';
 import { ApiCreatedResponse, ApiOperation, ApiQuery, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { Request, Response } from 'express';
 import { MessageResponse, RegisterResponse, TokenResponse, VerifyResponse } from './dto/responses';
 import { JwtService } from '@nestjs/jwt';
 import { MyError } from '../utils/constants/errors';
 import { JwtAuthGuard } from './guards/jwt.guards';
-import { VerifyEmailQuery } from './dto/querys';
+import { ResetPassword, UrlVerifyEmail, VerifyEmailQuery } from './dto/querys';
 import { CookieName } from '../utils/constants/constants';
 import { SessionService } from './session.service';
 import { UsersService } from '../users/users.service';
 import { DataRefreshToken, DecodedAccessToken, DecodedRefreshToken } from '../utils/interfaces';
 import { TokenService } from './token.service';
+
+//TODO токенами для сброса пароля можно пользоваться по нескольку раз, нужно сделать так что бы раз воспользовался и всё
 
 @ApiTags('Auth')
 @Controller('auth')
@@ -42,26 +44,28 @@ export class AuthController {
   @ApiCreatedResponse({ type: RegisterResponse })
   async register(@Body() registerDto: RegisterDto): Promise<RegisterResponse> {
     const user = await this.authService.register(registerDto);
-    await this.authService.sendVerifyEmail(user);
+    await this.authService.sendVerifyEmail(user, registerDto.urlVerifyEmail);
 
     return { id: user.id };
   }
 
-  @Get('sendVerifyEmail')
+  @Post('sendVerifyEmail')
   @HttpCode(200)
   @ApiOperation({ summary: 'Отправка письма для верификации' })
   @ApiResponse({ status: 200 })
   @UseGuards(JwtAuthGuard)
-  async sendVerifyEmail(@Req() req: Request): Promise<string> {
+  async sendVerifyEmail(@Req() req: Request, @Body() body: UrlVerifyEmail): Promise<string> {
+    console.log('body', body);
     const { id } = req.user as DecodedAccessToken;
     const user = await this.userService.getUserById(id);
-    return await this.authService.sendVerifyEmail(user);
+    return await this.authService.sendVerifyEmail(user, body.urlVerifyEmail);
   }
 
   @Get('verifyEmail')
   @HttpCode(200)
   @ApiOperation({ summary: 'Подтверждение почты' })
   @ApiCreatedResponse({ status: 200, type: VerifyResponse })
+  //TODO а если пришел вызов верификации почты с аккаунта не соответствующего токену (мол токен от пользователя id=2, а пришло от id=3)
   async verifyEmail(@Query() query: VerifyEmailQuery): Promise<VerifyResponse> {
     try {
       const { id } = this.jwtService.verify(query.token);
@@ -101,11 +105,7 @@ export class AuthController {
   @ApiOperation({ summary: 'Разлогинивание пользователя' })
   @ApiResponse({ status: 200 })
   // @UseGuards(JwtAuthGuard)
-  async logout(
-    @Req() req: Request,
-    @Body() id: number,
-    @Res({ passthrough: true }) res: Response,
-  ): Promise<void> {
+  async logout(@Req() req: Request, @Res({ passthrough: true }) res: Response): Promise<void> {
     const oldRefreshToken = req.cookies[CookieName.REFRESH_TOKEN];
     const { uuidSession } = this.jwtService.verify<DecodedRefreshToken>(oldRefreshToken);
     await this.sessionService.deleteSession(uuidSession);
@@ -121,8 +121,11 @@ export class AuthController {
   @ApiOperation({ summary: 'Отправка подтверждающего письма для сброса пароля' })
   @ApiResponse({ status: 200, type: MessageResponse })
   //TODO убрать на проде возврат токена
-  async sendMailResetPassword(@Body() dto: EmailOrLoginDto): Promise<{ message: string }> {
-    const verifyToken = await this.authService.sendMailResetPassword(dto.emailOrLogin);
+  async sendMailResetPassword(@Body() dto: ResetPassword): Promise<{ message: string }> {
+    const verifyToken = await this.authService.sendMailResetPassword(
+      dto.emailOrLogin,
+      dto.urlVerifyResetPassword,
+    );
     return { message: 'Письмо отправлено, verifyToken: ' + verifyToken };
   }
 
@@ -173,6 +176,7 @@ export class AuthController {
   @ApiOperation({ summary: 'Генерация новых токенов' })
   async refreshToken(@Req() req: Request, @Res({ passthrough: true }) res: Response): Promise<TokenResponse> {
     const oldRefreshToken: string = req.cookies[CookieName.REFRESH_TOKEN];
+
     if (oldRefreshToken) {
       try {
         const { id, login, uuidSession } = this.jwtService.verify(oldRefreshToken) as DataRefreshToken;
@@ -195,8 +199,11 @@ export class AuthController {
 
         return { token, expire };
       } catch (error) {
+        console.log('error', error);
         if (error.message == 'invalid signature') {
           throw new UnauthorizedException('Рефреш токен некорректный');
+        } else if (error.message == 'jwt expired') {
+          throw new UnauthorizedException('Рефреш токен более не действительный');
         } else {
           throw new UnauthorizedException(error.message);
         }

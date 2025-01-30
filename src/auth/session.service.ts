@@ -2,7 +2,6 @@ import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { In, Repository } from 'typeorm';
 import { UserSessionEntity } from './entities/user-session.entity';
-import { UserEntity } from '../users/entities/user.entity';
 import { AuthDto } from './dto/auth.dto';
 import { UsersService } from '../users/users.service';
 import { MyError } from '../utils/constants/errors';
@@ -24,14 +23,16 @@ export class SessionService {
       throw new UnauthorizedException(MyError.WRONG_IDENTIFICATION);
     }
 
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const { password, tmpPassword, ...userWithoutPasswordAndOtherField } = user;
     const session = await this.userSessionRepository.save({
-      user: user,
+      user: userWithoutPasswordAndOtherField,
       sessionMetadata,
     });
 
     const [sessions, count] = await this.userSessionRepository.findAndCount({
       where: {
-        user: { id: user.id } as UserEntity, //TODO посмотреть как можно избежать AS
+        user: { id: user.id },
       },
       order: {
         updatedAt: 'DESC',

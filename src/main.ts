@@ -12,6 +12,12 @@ async function bootstrap() {
   app.use(cookieParser());
   //app.use(logMiddleware);
   app.setGlobalPrefix('api');
+  //Отключает корсы для любого домена
+  app.enableCors({
+    origin: 'http://localhost:5173',
+    credentials: true,
+  });
+
   app.useGlobalPipes(
     new ValidationPipe({
       transform: true,
@@ -20,11 +26,7 @@ async function bootstrap() {
     }),
   );
 
-  SwaggerModule.setup(
-    'swagger',
-    app,
-    SwaggerModule.createDocument(app, getSwaggerConfig()),
-  );
+  SwaggerModule.setup('swagger', app, SwaggerModule.createDocument(app, getSwaggerConfig()));
 
   await app.listen(configService.get('port'));
 }

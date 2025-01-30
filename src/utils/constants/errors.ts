@@ -12,6 +12,7 @@ export const MyError = {
   EMAIL_REQUIRED: 'Email обязательно',
   PASSWORD_REQUIRED: 'Пароль обязателен',
   PASSWORD_REPEAT_REQUIRED: 'Необходимо повторить пароль',
+  URL_VERIFY_EMAIL_REQUIRED: 'Необходимо указать ссылку на страницу для верификацию почты',
   NEW_PASSWORD_REQUIRED: 'Необходимо указать новый пароль',
   PASSWORD_MISMATCH: 'Пароли не совпадают',
   VERIFICATION_EMAIL_NULL: 'Почта не подтверждена',

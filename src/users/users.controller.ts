@@ -1,4 +1,15 @@
-import { Body, Controller, Delete, Get, Param, Patch, Query, Req, UseGuards } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  NotFoundException,
+  Param,
+  Patch,
+  Query,
+  Req,
+  UseGuards,
+} from '@nestjs/common';
 import { UsersService } from './users.service';
 import { ApiBearerAuth, ApiOperation, ApiQuery, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { UpdateUserDto } from './dto/user.dto';
@@ -7,6 +18,7 @@ import { Request } from 'express';
 import { UserEntity } from './entities/user.entity';
 import { AllUser } from './dto/response.dto';
 import { DecodedAccessToken } from '../utils/interfaces';
+import { MyError } from '../utils/constants/errors';
 
 @ApiTags('Users')
 @ApiBearerAuth()
@@ -19,7 +31,15 @@ export class UsersController {
   @ApiOperation({ summary: 'Получить текущего пользователя' })
   @UseGuards(JwtAuthGuard)
   async getMe(@Req() req: Request) {
-    console.log('req.user', req.user);
+    const { id } = req.user as DecodedAccessToken;
+    return this.userService.getUserById(id);
+  }
+
+  @Get('mySessions')
+  @ApiResponse({ status: 200, type: UserEntity })
+  @ApiOperation({ summary: 'Получить текущего пользователя' })
+  @UseGuards(JwtAuthGuard)
+  async getMySessions(@Req() req: Request) {
     const { id } = req.user as DecodedAccessToken;
     return this.userService.getSessionsUser(id);
   }
@@ -41,13 +61,21 @@ export class UsersController {
     return await this.userService.getAllUsers(take, skip, withDeleted);
   }
 
-  @Get(`:id`)
+  @Get(':param')
   @ApiResponse({ status: 200, type: UserEntity })
   @ApiResponse({ status: 404, description: 'User not found' })
-  @ApiOperation({ summary: 'Получить пользователя по id' })
-  @ApiQuery({ name: 'withDeleted', required: false })
-  async getUserById(@Param('id') id: number, @Query('withDeleted') withDeleted?: boolean) {
-    return await this.userService.getUserById(id, withDeleted);
+  @ApiOperation({ summary: 'Получить пользователя по id или логину' })
+  async getUser(@Param('param') param: string) {
+    const isId = !isNaN(Number(param));
+    if (isId) {
+      return await this.userService.getUserById(Number(param));
+    } else {
+      const user = await this.userService.findUserEmailOrLogin(param);
+      if (!user) {
+        throw new NotFoundException(MyError.NOT_FOUND);
+      }
+      return user;
+    }
   }
 
   @Patch(':id')

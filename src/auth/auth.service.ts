@@ -35,14 +35,14 @@ export class AuthService {
     return await this.userService.createUser(registerDto);
   }
 
-  async sendVerifyEmail(user: UserNotPassword) {
+  async sendVerifyEmail(user: UserNotPassword, url: string) {
     if (user.emailVerifiedAt) {
       throw new UnauthorizedException(MyError.VERIFICATION_EMAIL_ALREADY);
     }
     const verifyToken: string = await this.tokenService.generateVerifyToken({
       id: user.id,
     });
-    await this.emailService.verifyEmail(user.email, verifyToken);
+    await this.emailService.verifyEmail(user.email, url, verifyToken);
     return verifyToken;
   }
 
@@ -62,9 +62,6 @@ export class AuthService {
 
   async login(dto: AuthDto, sessionMetadata: string) {
     const sessionInfo = await this.sessionService.setSession(dto, sessionMetadata);
-
-    console.log('uuidSession', sessionInfo.id);
-
     const { accessToken, refreshToken } = await this.tokenService.generateTokens({
       id: sessionInfo.user.id,
       login: sessionInfo.user.login,
@@ -77,7 +74,6 @@ export class AuthService {
       token: accessToken,
       expire: new Date(exp * 1000),
       refreshToken: refreshToken,
-      userId: sessionInfo.user.id,
     };
   }
 
@@ -104,10 +100,10 @@ export class AuthService {
     };
   }
 
-  async sendMailResetPassword(emailOrLogin: string) {
+  async sendMailResetPassword(emailOrLogin: string, url: string) {
     const existUser = await this.userService.findUserEmailOrLogin(emailOrLogin);
     const verifyToken = await this.tokenService.generateVerifyToken({ id: existUser.id });
-    await this.emailService.verifyResetPassword(existUser.email, verifyToken);
+    await this.emailService.verifyResetPassword(existUser.email, url, verifyToken);
     return verifyToken;
   }
 

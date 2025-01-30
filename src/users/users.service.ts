@@ -23,7 +23,7 @@ export class UsersService {
     return { users, count };
   }
 
-  async getSessionsUser(userId: number) {
+  async getSessionsUser(userId: number): Promise<UserNotPassword> {
     return await this.usersRepository.findOne({
       where: [{ id: userId }],
       relations: { sessions: true },
@@ -65,15 +65,15 @@ export class UsersService {
   }
 
   async findUserEmailOrLogin(emailOrLogin: string): Promise<UserNotPassword> {
-    const existUser = await this.usersRepository.findOne({
+    return await this.usersRepository.findOne({
       where: [{ login: emailOrLogin }, { email: emailOrLogin }],
     });
 
-    if (!existUser) {
-      throw new NotFoundException(MyError.NOT_FOUND);
-    } else {
-      return existUser;
-    }
+    // if (!existUser) {
+    //   throw new NotFoundException(MyError.USER_NOT_FOUND);
+    // } else {
+    //   return existUser;
+    // }
   }
 
   async findUserByEmailOrLoginWithPassword(emailOrLogin: string): Promise<UserEntity> {
@@ -83,7 +83,7 @@ export class UsersService {
     });
 
     if (!existUser) {
-      throw new NotFoundException(MyError.NOT_FOUND);
+      throw new NotFoundException(MyError.USER_NOT_FOUND);
     } else {
       return existUser;
     }

@@ -23,13 +23,14 @@ export class EmailService {
     return 'email sent';
   }
 
-  async verifyEmail(to: string, token: string) {
+  async verifyEmail(to: string, url: string, token: string) {
     await this.mailerService.sendMail({
       to: 'hiryrg_94_94@mail.ru',
       subject: 'Необходимо подтверждение почты',
       template: 'verificationEmail',
       context: {
-        url: `${this.configService.get('url')}:${this.configService.get('port')}/api/auth/verifyEmail?token=${token}`,
+        url: `${url}?token=${token}`,
+        // url: `${this.configService.get('url')}:${this.configService.get('port')}/api/auth/verifyEmail?token=${token}`,
         app_name: 'Наименование приложения',
         title: 'Спасибо за регистрацию, подтвердите свою почту.',
         actionTitle: 'Перейдите по ссылке для подтверждения почты',
@@ -37,13 +38,14 @@ export class EmailService {
     });
   }
 
-  async verifyResetPassword(to: string, token: string) {
+  async verifyResetPassword(to: string, url: string, token: string) {
     await this.mailerService.sendMail({
       to: 'hiryrg_94_94@mail.ru',
       subject: 'Необходимо подтвердить смену пароля',
       template: 'verificationResetPassword',
       context: {
-        url: `${this.configService.get('url')}:${this.configService.get('port')}/api/auth/verifyResetPassword?token=${token}`, //Перекидывать на страницу смены пароля
+        url: `${url}?token=${token}`,
+        //url: `${this.configService.get('url')}:${this.configService.get('port')}/api/auth/verifyResetPassword?token=${token}`, //Перекидывать на страницу смены пароля
         app_name: 'Наименование приложения',
         title: 'Спасибо за регистрацию, подтвердите свою почту.',
         actionTitle: 'Перейдите по ссылке для подтверждения почты',
